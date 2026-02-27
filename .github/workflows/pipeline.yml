@@ -1,0 +1,22 @@
+name: SDN NetDevOps Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  sdn-pipeline:
+    runs-on: self-hosted   
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 🐳 Build Docker Image
+        run: docker build -t mon-ryu ./docker
+
+      - name: 🚀 Deploy Infrastructure with Ansible
+        run: ansible-playbook ansible/deploy.yml -i ansible/inventory.ini
+
+      - name: 🧪 Run Network Automated Tests
+        run: sudo python3 tests/network_tests.py
