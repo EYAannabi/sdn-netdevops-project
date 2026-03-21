@@ -10,9 +10,11 @@
 
 - name: Démarrer la topologie LAB si elle est absente
   shell: >
-    nohup sudo python3 {{ playbook_dir }}/../topology/start_lab_topology.py
+    nohup python3 {{ playbook_dir }}/../topology/start_lab_topology.py
     > /tmp/mininet-lab.log 2>&1 < /dev/null &
   become: yes
+  environment:
+    PYTHONDONTWRITEBYTECODE: "1"
   when: topo_check.rc != 0
 
 - name: Attendre quelques secondes que la topologie démarre
