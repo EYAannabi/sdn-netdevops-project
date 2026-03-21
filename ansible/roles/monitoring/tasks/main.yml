@@ -1,11 +1,13 @@
-- name: Ensure monitoring directory exists
-  stat:
-    path: "{{ playbook_dir }}/../monitoring"
-  register: monitoring_dir
+- name: Remove stale grafana container if exists
+  shell: docker rm -f grafana || true
 
-- name: Start monitoring stack if docker-compose exists
-  shell: docker compose up -d
+- name: Ensure monitoring stack is started
+  shell: docker-compose up -d --build
   args:
-    chdir: "{{ playbook_dir }}/../monitoring"
-  when: monitoring_dir.stat.exists
-  failed_when: false
+    chdir: "{{ playbook_dir }}/.."
+  register: monitoring_result
+  failed_when: monitoring_result.rc != 0
+
+- name: Show monitoring deployment result
+  debug:
+    msg: "{{ monitoring_result.stdout_lines }}"

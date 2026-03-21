@@ -9,21 +9,16 @@ from mininet.node import RemoteController, OVSKernelSwitch
 from mininet.link import TCLink
 from mininet.log import setLogLevel, info
 
-# Ajouter la racine du projet au PYTHONPATH
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from topology.datacenter_topo import DatacenterTopo
 
-# =========================
-# Configuration centrale
-# =========================
 CONTROLLER_IP = "127.0.0.1"
 CONTROLLER_PORT = 6633
-POLICY_DEPLOY_SCRIPT = "scripts/deploy_policies.py"
+POLICY_DEPLOY_SCRIPT = os.path.join(PROJECT_ROOT, "scripts", "deploy_policies.py")
 
-# Cas de tests facilement modifiables si la politique change
 ALLOW_TESTS = [
     ("h1", "10.0.0.2", "h2"),
 ]
@@ -33,17 +28,15 @@ DENY_TESTS = [
 ]
 
 QOS_TESTS = [
-    ("h1", "h2", 15.0),   # max toléré en Mbps
+    ("h1", "h2", 15.0),
 ]
 
 
 def run_command(cmd):
-    """Exécute une commande shell."""
     return subprocess.run(cmd, shell=True, text=True, capture_output=True)
 
 
 def deploy_policies():
-    """Déploie les policies via script externe."""
     info("*** 🚀 Déploiement des politiques réseau...\n")
     result = run_command(f"python3 {POLICY_DEPLOY_SCRIPT}")
 
@@ -57,7 +50,6 @@ def deploy_policies():
 
 
 def test_ping_allowed(net, src_name, dst_ip, dst_name):
-    """Teste qu'un ping doit être autorisé."""
     info(f"*** 🟢 TEST ALLOW: {src_name} -> {dst_name}\n")
     src = net.get(src_name)
     result = src.cmd(f"ping -c 2 {dst_ip}")
@@ -72,7 +64,6 @@ def test_ping_allowed(net, src_name, dst_ip, dst_name):
 
 
 def test_ping_denied(net, src_name, dst_ip, dst_name):
-    """Teste qu'un ping doit être bloqué."""
     info(f"*** 🔴 TEST DENY: {src_name} -> {dst_name}\n")
     src = net.get(src_name)
     result = src.cmd(f"ping -c 2 {dst_ip}")
@@ -87,13 +78,6 @@ def test_ping_denied(net, src_name, dst_ip, dst_name):
 
 
 def parse_iperf_mbps(bw_str):
-    """
-    Convertit une sortie iperf Mininet en Mbps.
-    Exemples:
-      '9.52 Mbits/sec' -> 9.52
-      '800 Kbits/sec'  -> 0.8
-      '1.20 Gbits/sec' -> 1200
-    """
     try:
         parts = bw_str.strip().split()
         value = float(parts[0])
@@ -112,7 +96,6 @@ def parse_iperf_mbps(bw_str):
 
 
 def test_qos(net, src_name, dst_name, max_mbps):
-    """Teste qu'une limitation QoS est respectée."""
     info(f"*** 📊 TEST QoS: {src_name} -> {dst_name}, max attendu ~ {max_mbps} Mbps\n")
     src = net.get(src_name)
     dst = net.get(dst_name)
@@ -140,7 +123,6 @@ def test_qos(net, src_name, dst_name, max_mbps):
 
 
 def build_network():
-    """Construit le réseau Mininet éphémère."""
     info("*** 🏗️ Création du réseau CI éphémère...\n")
     topo = DatacenterTopo()
     switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13")
@@ -163,7 +145,6 @@ def build_network():
     c0.start()
     time.sleep(2)
     net.start()
-
     return net
 
 

@@ -1,14 +1,19 @@
 import yaml
 import subprocess
+import sys
 
 CONFIG_PATH = "/app/iac/controller_config.yml"
 
-with open(CONFIG_PATH, "r") as f:
-    config = yaml.safe_load(f)
+try:
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)
 
-app_string = config["controller"]["app"]
-print(f"🚀 Lancement du contrôleur Ryu avec : {app_string}")
+    apps = config["controller"]["apps"]
 
-# On sépare la chaîne en une liste d'arguments pour subprocess
-cmd = ["ryu-manager"] + app_string.split()
-subprocess.run(cmd)
+    print(f"🚀 Lancement du contrôleur Ryu avec : {apps}")
+
+    subprocess.run(["ryu-manager", "--verbose"] + apps)
+
+except Exception as e:
+    print(f"❌ Erreur : {e}")
+    sys.exit(1)

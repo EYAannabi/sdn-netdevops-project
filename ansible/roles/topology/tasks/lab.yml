@@ -1,16 +1,37 @@
 - name: Vérifier si la topologie LAB tourne déjà
-  shell: pgrep -f start_lab_topology.py
+  shell: pgrep -af "[p]ython3 .*topology/start_lab_topology.py"
   register: topo_check
   failed_when: false
   changed_when: false
 
+- name: Afficher le résultat de détection de la topologie
+  debug:
+    msg: "{{ topo_check.stdout_lines }}"
+
 - name: Démarrer la topologie LAB si elle est absente
   shell: >
-    nohup python3 {{ playbook_dir }}/../topology/start_lab_topology.py
-    > /tmp/mininet-lab.log 2>&1 &
+    nohup sudo python3 {{ playbook_dir }}/../topology/start_lab_topology.py
+    > /tmp/mininet-lab.log 2>&1 < /dev/null &
   become: yes
   when: topo_check.rc != 0
 
 - name: Attendre quelques secondes que la topologie démarre
   pause:
-    seconds: 8
+    seconds: 10
+
+- name: Vérifier que la topologie LAB tourne maintenant
+  shell: pgrep -af "[p]ython3 .*topology/start_lab_topology.py"
+  register: topo_check_after
+  failed_when: topo_check_after.rc != 0
+  changed_when: false
+
+- name: Vérifier que des bridges OVS existent
+  shell: ovs-vsctl list-br
+  become: yes
+  register: ovs_bridges
+  failed_when: ovs_bridges.stdout_lines | length == 0
+  changed_when: false
+
+- name: Afficher les bridges OVS
+  debug:
+    msg: "{{ ovs_bridges.stdout_lines }}"

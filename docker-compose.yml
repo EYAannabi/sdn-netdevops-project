@@ -1,25 +1,39 @@
-# Fichier: docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
-  # 1. Ton traducteur Python (L'exporter)
   ryu_exporter:
     build:
-      context: . # Indique que le contexte de build est la racine du projet
+      context: .
       dockerfile: docker/Dockerfile.exporter
-    network_mode: "host"
-    restart: always
+    container_name: ryu_exporter
+    environment:
+      - RYU_STATS_URL=http://sdn-controller:8080/stats/port/ALL
+    ports:
+      - "8000:8000"
+    networks:
+      - sdn_net
+    restart: unless-stopped
 
-  # 2. La base de données temporelle
   prometheus:
     image: prom/prometheus:latest
-    network_mode: "host"
+    container_name: prometheus
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    restart: always
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - sdn_net
+    restart: unless-stopped
 
-  # 3. Le Dashboard
   grafana:
     image: grafana/grafana:latest
-    network_mode: "host"
-    restart: always
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - sdn_net
+    restart: unless-stopped
+
+networks:
+  sdn_net:
+    name: sdn_net

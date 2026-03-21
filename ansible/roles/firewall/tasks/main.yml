@@ -1,65 +1,12 @@
-- name: ⏳ Attendre que Mininet connecte tous les switchs
-  ansible.builtin.pause:
-    seconds: 30
+- name: Wait for topology and switches to be ready
+  pause:
+    seconds: 15
 
-# 1️⃣ ON ACTIVE LE PARE-FEU EN PREMIER (Très important !)
-- name: Enable Firewall module on switches
-  uri:
-    url: "http://127.0.0.1:8080/firewall/module/enable/{{ item }}"
-    method: PUT
-    status_code: 200
-  loop:
-    - "0000000000000001"
-    - "0000000000000002"
-    - "0000000000000003"
-    - "0000000000000004"  # <-- Switch 4 ajouté
+- name: Apply SDN policies from source of truth
+  shell: python3 {{ playbook_dir }}/../scripts/deploy_policies.py
+  register: policy_result
+  changed_when: true
 
-# 2️⃣ ENSUITE SEULEMENT, ON AJOUTE LES RÈGLES
-- name: Add ICMP drop rule
-  uri:
-    url: "http://127.0.0.1:8080/firewall/rules/{{ item }}"
-    method: POST
-    body_format: json
-    body:
-      priority: 100
-      dl_type: "IPv4"
-      nw_proto: "ICMP"
-      actions: "DENY"
-    status_code: 200
-  loop:
-    - "0000000000000001"
-    - "0000000000000002"
-    - "0000000000000003"
-    - "0000000000000004"  # <-- Switch 4 ajouté
-
-- name: Allow all other IPv4 traffic (TCP/UDP)
-  uri:
-    url: "http://127.0.0.1:8080/firewall/rules/{{ item }}"
-    method: POST
-    body_format: json
-    body:
-      priority: 10
-      dl_type: "IPv4"
-      actions: "ALLOW"
-    status_code: 200
-  loop:
-    - "0000000000000001"
-    - "0000000000000002"
-    - "0000000000000003"
-    - "0000000000000004"  # <-- Switch 4 ajouté
-
-- name: Allow ARP traffic (Indispensable pour la découverte MAC)
-  uri:
-    url: "http://127.0.0.1:8080/firewall/rules/{{ item }}"
-    method: POST
-    body_format: json
-    body:
-      priority: 10
-      dl_type: "ARP"
-      actions: "ALLOW"
-    status_code: 200
-  loop:
-    - "0000000000000001"
-    - "0000000000000002"
-    - "0000000000000003"
-    - "0000000000000004"  # <-- Switch 4 ajouté
+- name: Show policy deployment result
+  debug:
+    msg: "{{ policy_result.stdout_lines }}"

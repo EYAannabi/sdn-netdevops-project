@@ -1,8 +1,7 @@
-# Fichier: monitoring/prometheus.yml
 global:
-  scrape_interval: 5s # Prometheus va récupérer les données toutes les 5 secondes
+  scrape_interval: 5s
 
 scrape_configs:
-  - job_name: 'sdn_controller'
+  - job_name: 'ryu_exporter'
     static_configs:
-      - targets: ['127.0.0.1:8000'] # C'est le port de notre futur "traducteur" (Exporter)
+      - targets: ['ryu_exporter:8000']

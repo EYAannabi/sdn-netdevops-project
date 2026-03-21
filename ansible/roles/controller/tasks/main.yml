@@ -3,6 +3,9 @@
   args:
     chdir: "{{ playbook_dir }}/.."
 
+- name: Ensure Docker network exists
+  shell: docker network create sdn_net || true
+
 - name: Remove existing controller container if exists
   shell: docker rm -f sdn-controller || true
 
@@ -10,6 +13,7 @@
   command: >
     docker run -d
     --name sdn-controller
+    --network sdn_net
     -p 6633:6633
     -p 8080:8080
     mon-ryu:v2

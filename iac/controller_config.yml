@@ -1,4 +1,7 @@
 controller:
-  app: "ryu.app.simple_switch_13 ryu.app.rest_qos ryu.app.ofctl_rest"
+  apps:
+    - ryu.app.simple_switch_13
+    - ryu.app.ofctl_rest
+    - ryu.app.rest_firewall
   of_port: 6633
   rest_port: 8080
