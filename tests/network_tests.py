@@ -16,7 +16,7 @@ if PROJECT_ROOT not in sys.path:
 from topology.datacenter_topo import DatacenterTopo
 
 CONTROLLER_IP = "127.0.0.1"
-CONTROLLER_PORT = 6633
+CONTROLLER_PORT = 6635
 POLICY_DEPLOY_SCRIPT = os.path.join(PROJECT_ROOT, "scripts", "deploy_policies.py")
 
 ALLOW_TESTS = [
