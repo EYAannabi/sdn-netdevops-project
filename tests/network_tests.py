@@ -3,6 +3,8 @@ import sys
 import time
 import subprocess
 from functools import partial
+import socket
+import requests
 
 from mininet.net import Mininet
 from mininet.node import RemoteController, OVSKernelSwitch

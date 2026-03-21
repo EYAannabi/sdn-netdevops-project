@@ -24,3 +24,9 @@
     port: 8080
     delay: 2
     timeout: 30
+- name: Wait for OpenFlow port to open
+  wait_for:
+    host: 127.0.0.1
+    port: 6633
+    delay: 2
+    timeout: 30
