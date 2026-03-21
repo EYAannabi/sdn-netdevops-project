@@ -27,6 +27,6 @@
 - name: Wait for OpenFlow port to open
   wait_for:
     host: 127.0.0.1
-    port: 6633
+    port: 663()
     delay: 2
     timeout: 30

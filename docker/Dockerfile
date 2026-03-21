@@ -7,6 +7,6 @@ RUN pip install ryu eventlet==0.30.2 tinyrpc pyyaml
 
 COPY . /app
 
-EXPOSE 6633 8080
+EXPOSE 6653 8080
 
 CMD ["python3", "controller/main_controller.py"]

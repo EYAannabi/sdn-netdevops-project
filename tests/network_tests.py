@@ -19,7 +19,7 @@ from topology.datacenter_topo import DatacenterTopo
 
 # ✅ CORRECTION : bon port OpenFlow
 CONTROLLER_IP = "127.0.0.1"
-CONTROLLER_PORT = 6633
+CONTROLLER_PORT = 6653
 
 POLICY_DEPLOY_SCRIPT = os.path.join(PROJECT_ROOT, "scripts", "deploy_policies.py")
 
