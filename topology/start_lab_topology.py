@@ -16,7 +16,7 @@ if PROJECT_ROOT not in sys.path:
 from topology.datacenter_topo import DatacenterTopo
 
 CONTROLLER_IP = "127.0.0.1"
-CONTROLLER_PORT = 6633
+CONTROLLER_PORT = 6653
 
 
 def main():
