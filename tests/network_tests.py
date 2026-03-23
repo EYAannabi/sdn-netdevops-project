@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import subprocess
+import re
 from functools import partial
 
 from mininet.net import Mininet
@@ -16,7 +17,7 @@ if PROJECT_ROOT not in sys.path:
 from topology.datacenter_topo import DatacenterTopo
 
 CONTROLLER_IP = "127.0.0.1"
-CONTROLLER_PORT = 6653  # ⬅️ CORRECTION ICI : on utilise le port 6653 !
+CONTROLLER_PORT = 6653
 POLICY_DEPLOY_SCRIPT = os.path.join(PROJECT_ROOT, "scripts", "deploy_policies.py")
 
 ALLOW_TESTS = [
@@ -33,8 +34,8 @@ QOS_TESTS = [
 
 
 def run_command(cmd: str) -> subprocess.CompletedProcess:
-    # On enlève capture_output pour voir les erreurs en direct !
     return subprocess.run(cmd, shell=True)
+
 
 def deploy_policies() -> bool:
     info("*** 🚀 Deploying network policies...\n")
@@ -42,10 +43,6 @@ def deploy_policies() -> bool:
 
     if result.returncode != 0:
         info("❌ Policy deployment failed.\n")
-        if result.stdout:
-            info(result.stdout + "\n")
-        if result.stderr:
-            info(result.stderr + "\n")
         return False
 
     info("✅ Policies deployed successfully.\n")
@@ -54,7 +51,6 @@ def deploy_policies() -> bool:
 
 def test_ping_allowed(net: Mininet, src_name: str, dst_ip: str, dst_name: str) -> bool:
     info(f"*** 🟢 ALLOW TEST: {src_name} -> {dst_name}\n")
-    # -W 1 force le ping à abandonner après 1 seconde s'il n'y a pas de réponse
     result = net.get(src_name).cmd(f"ping -c 2 -W 1 {dst_ip}")
 
     if "0% packet loss" in result:
@@ -77,6 +73,23 @@ def test_ping_denied(net: Mininet, src_name: str, dst_ip: str, dst_name: str) ->
     return False
 
 
+def parse_iperf_mbps(iperf_output: str):
+    # Cherche la bande passante avec Regex dans la sortie brute Linux
+    matches = re.findall(r'(\d+(?:\.\d+)?)\s+([KkMmGg]bits?/sec)', iperf_output)
+    if not matches:
+        return None
+    
+    # Prendre la dernière occurrence (généralement la moyenne)
+    value_str, unit = matches[-1]
+    value = float(value_str)
+
+    if 'K' in unit.upper(): return value / 1000.0
+    if 'M' in unit.upper(): return value
+    if 'G' in unit.upper(): return value * 1000.0
+
+    return None
+
+
 def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> bool:
     info(f"*** 📊 QoS TEST: {src_name} -> {dst_name}, expected <= {max_mbps} Mbps\n")
 
@@ -84,18 +97,16 @@ def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> boo
         srv = net.get(dst_name)
         cli = net.get(src_name)
 
-        # Lancer le serveur iperf en tâche de fond
+        # Lancer iperf serveur
         srv.cmd("iperf -s &")
-        time.sleep(1) # Laisser 1 seconde au serveur pour démarrer
+        time.sleep(1)
 
-        # Lancer le client avec la commande Linux 'timeout' (5 secondes max)
-        # -t 2 signifie que le test iperf doit durer 2 secondes
+        # Lancer iperf client (2 secondes de test)
         bw_output = cli.cmd(f"timeout 5 iperf -c {srv.IP()} -t 2")
 
         # Couper le serveur proprement
         srv.cmd("killall -9 iperf")
 
-        # Si 'timeout' a tué le processus, c'est que le trafic était bloqué
         if not bw_output.strip() or "Connection timed out" in bw_output:
             info("   ❌ FAIL: Le test a figé (trafic probablement bloqué par le Firewall)\n")
             return False
@@ -103,6 +114,7 @@ def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> boo
         mbps = parse_iperf_mbps(bw_output)
         if mbps is None:
             info("   ❌ FAIL: unrecognized iperf output format\n")
+            info(f"Sortie brute: {bw_output}\n")
             return False
 
         if mbps <= max_mbps:
@@ -115,6 +127,7 @@ def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> boo
     except Exception as e:
         info(f"   ❌ QoS exception: {e}\n")
         return False
+
 
 def build_network() -> Mininet:
     info("*** 🏗️ Creating ephemeral CI network...\n")
@@ -146,9 +159,7 @@ def run_automated_tests() -> int:
     net = None
 
     try:
-        # Ansible already waits for 8080 and 6653 before calling this script
         info("*** ⏳ Controller was already validated by Ansible. Starting CI network...\n")
-
         net = build_network()
 
         info("*** ⏳ Waiting for switches to connect and network to learn...\n")
