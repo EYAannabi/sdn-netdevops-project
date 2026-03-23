@@ -146,7 +146,7 @@ def run_automated_tests() -> int:
         for test in DENY_TESTS:
             all_ok = test_ping_denied(net, *test) and all_ok
 
-        for test in QOS_TESTS:
+        #for test in QOS_TESTS:
             #all_ok = test_qos(net, *test) and all_ok
 
         if all_ok:
