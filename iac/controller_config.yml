@@ -1,7 +1,7 @@
 controller:
   apps:
-    - ryu.app.simple_switch_stp_13  # <-- Remplaçant de simple_switch_13 pour gérer les boucles (STP) !
-    - ryu.app.ofctl_rest            # <-- Gère tes règles QoS (Meters)
-    - ryu.app.rest_firewall         # <-- Gère ton Firewall
-  of_port: 6653                     # <-- Le bon port OpenFlow
-  rest_port: 8080                   # <-- Le bon port REST API
+    - ryu.app.simple_switch_13      # On remet le basique, il est instantané !
+    - ryu.app.ofctl_rest
+    - ryu.app.rest_firewall
+  of_port: 6653
+  rest_port: 8080
