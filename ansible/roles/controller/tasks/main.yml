@@ -14,7 +14,7 @@
     docker run -d
     --name sdn-controller
     --network sdn_net
-    -p 6653:6653          # ⬅️ CORRECTION ICI !
+    -p 6653:6653
     -p 8080:8080
     mon-ryu:v2
 
@@ -28,6 +28,6 @@
 - name: Wait for OpenFlow port to open
   wait_for:
     host: 127.0.0.1
-    port: 6653          # ⬅️ CORRECTION ICI AUSSI !
+    port: 6653
     delay: 2
     timeout: 30
