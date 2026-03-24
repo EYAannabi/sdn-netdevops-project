@@ -36,4 +36,4 @@ services:
 
 networks:
   sdn_net:
-    name: sdn_net
+    external: true
