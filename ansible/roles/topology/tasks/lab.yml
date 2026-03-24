@@ -10,11 +10,6 @@
   debug:
     msg: "Bridges actuels : {{ existing_ovs.stdout_lines | default(['Aucun bridge détecté']) }}"
 
-- name: Nettoyer l'environnement Mininet (mn -c) uniquement si le lab est éteint
-  shell: mn -c
-  become: yes
-  when: existing_ovs.stdout == ""
-
 - name: Démarrer la topologie LAB si elle est absente
   shell: >
     nohup python3 {{ playbook_dir }}/../topology/start_lab_topology.py
