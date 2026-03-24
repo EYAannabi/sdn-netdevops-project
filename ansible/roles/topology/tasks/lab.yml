@@ -1,12 +1,19 @@
-- name: Vérifier si la topologie LAB tourne déjà
-  shell: pgrep -af "[p]ython3 .*topology/start_lab_topology.py"
-  register: topo_check
-  failed_when: false
+---
+- name: Vérifier si la topologie Mininet tourne déjà (via OVS)
+  shell: ovs-vsctl list-br
+  become: yes
+  register: existing_ovs
   changed_when: false
+  failed_when: false
 
-- name: Afficher le résultat de détection de la topologie
+- name: Afficher le statut actuel des bridges
   debug:
-    msg: "{{ topo_check.stdout_lines }}"
+    msg: "Bridges actuels : {{ existing_ovs.stdout_lines | default(['Aucun bridge détecté']) }}"
+
+- name: Nettoyer l'environnement Mininet (mn -c) uniquement si le lab est éteint
+  shell: mn -c
+  become: yes
+  when: existing_ovs.stdout == ""
 
 - name: Démarrer la topologie LAB si elle est absente
   shell: >
@@ -15,25 +22,20 @@
   become: yes
   environment:
     PYTHONDONTWRITEBYTECODE: "1"
-  when: topo_check.rc != 0
+  when: existing_ovs.stdout == ""
 
-- name: Attendre quelques secondes que la topologie démarre
+- name: Attendre quelques secondes que la topologie démarre (si nouvellement lancée)
   pause:
-    seconds: 10
+    seconds: 15
+  when: existing_ovs.stdout == ""
 
-- name: Vérifier que la topologie LAB tourne maintenant
-  shell: pgrep -af "[p]ython3 .*topology/start_lab_topology.py"
-  register: topo_check_after
-  failed_when: topo_check_after.rc != 0
-  changed_when: false
-
-- name: Vérifier que des bridges OVS existent
+- name: Vérifier que des bridges OVS existent maintenant
   shell: ovs-vsctl list-br
   become: yes
-  register: ovs_bridges
-  failed_when: ovs_bridges.stdout_lines | length == 0
+  register: final_ovs_bridges
+  failed_when: final_ovs_bridges.stdout_lines | length == 0
   changed_when: false
 
-- name: Afficher les bridges OVS
+- name: Afficher les bridges OVS finaux
   debug:
-    msg: "{{ ovs_bridges.stdout_lines }}"
+    msg: "{{ final_ovs_bridges.stdout_lines }}"
