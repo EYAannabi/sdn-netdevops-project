@@ -1,6 +1,6 @@
 ---
-- name: Clean up old monitoring stack and orphans
-  shell: docker-compose down --remove-orphans
+- name: Clean up old monitoring stack
+  shell: docker-compose down
   args:
     chdir: "{{ playbook_dir }}/.."
   ignore_errors: true
