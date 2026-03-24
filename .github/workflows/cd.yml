@@ -1,28 +1,41 @@
-name: SDN CD
+---
+- name: Vérifier si la topologie Mininet tourne déjà (via OVS)
+  shell: ovs-vsctl list-br
+  become: yes
+  register: existing_ovs
+  changed_when: false
+  failed_when: false
 
-on:
-  workflow_run:
-    workflows: ["SDN CI"]
-    types: [completed]
+- name: Afficher le statut actuel des bridges
+  debug:
+    msg: "Bridges actuels : {{ existing_ovs.stdout_lines | default(['Aucun bridge détecté']) }}"
 
-jobs:
-  deploy-lab:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: self-hosted
-    env:
-      PYTHONDONTWRITEBYTECODE: "1"
+- name: Nettoyer l'environnement Mininet (mn -c) uniquement si le lab est éteint
+  shell: mn -c
+  become: yes
+  when: existing_ovs.stdout == ""
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          clean: false
+- name: Démarrer la topologie LAB si elle est absente
+  shell: >
+    nohup python3 {{ playbook_dir }}/../topology/start_lab_topology.py
+    > /tmp/mininet-lab.log 2>&1 < /dev/null &
+  become: yes
+  environment:
+    PYTHONDONTWRITEBYTECODE: "1"
+  when: existing_ovs.stdout == ""
 
-      - name: Build Docker image
-        run: docker build -t mon-ryu:v2 -f docker/Dockerfile .
+- name: Attendre quelques secondes que la topologie démarre (si nouvellement lancée)
+  pause:
+    seconds: 15
+  when: existing_ovs.stdout == ""
 
-      - name: Deploy persistent lab
-        run: ansible-playbook ansible/deploy_lab.yml -i ansible/inventory.ini
+- name: Vérifier que des bridges OVS existent maintenant
+  shell: ovs-vsctl list-br
+  become: yes
+  register: final_ovs_bridges
+  failed_when: final_ovs_bridges.stdout_lines | length == 0
+  changed_when: false
 
-      - name: Validate persistent lab
-        run: sudo -E env PYTHONDONTWRITEBYTECODE=1 python3 tests/validate_lab.py
+- name: Afficher les bridges OVS finaux
+  debug:
+    msg: "{{ final_ovs_bridges.stdout_lines }}"
