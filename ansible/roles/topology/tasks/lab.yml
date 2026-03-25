@@ -16,6 +16,10 @@
   debug:
     msg: "Bridges actuels : {{ existing_ovs.stdout_lines | default(['Aucun bridge détecté']) }}"
 
+- name: 🧹 Détruire l'ancienne session tmux si elle existe
+  shell: tmux kill-session -t mininet_lab
+  ignore_errors: true
+
 - name: Démarrer la topologie LAB dans une session tmux (si absente)
   shell: >
     tmux new-session -d -s mininet_lab 'sudo env PYTHONDONTWRITEBYTECODE=1 python3 {{ playbook_dir }}/../topology/start_lab_topology.py'
