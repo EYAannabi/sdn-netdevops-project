@@ -18,6 +18,7 @@
 
 - name: 🧹 Détruire l'ancienne session tmux si elle existe
   shell: tmux kill-session -t mininet_lab
+  become: yes          # <--- LA LIGNE MAGIQUE À AJOUTER ICI
   ignore_errors: true
 
 - name: Démarrer la topologie LAB dans une session tmux (si absente)
