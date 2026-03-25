@@ -107,7 +107,8 @@ def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> boo
 
         # On lance iperf via l'API python de mininet (UDP pour forcer le max de bande passante)
         info(f"   ⏳ Running iperf from {src_name} to {dst_name} for 3 seconds...\n")
-        result = net.iperf([cli, srv], seconds=3, udp=True)
+        result = net.iperf([cli, srv], seconds=3)
+        #result = net.iperf([cli, srv], seconds=3, udp=True)
 
         if result and len(result) >= 2:
             bw_str = result[0] # Ex: '9.56 Mbits/sec'
