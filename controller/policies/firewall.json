@@ -1,15 +1,23 @@
 {
     "global_rules": [
-        {"priority": 10, "dl_type": "IPv4", "actions": "ALLOW"},
-        {"priority": 10, "dl_type": "ARP", "actions": "ALLOW"}
+        {"priority": 1, "dl_type": "IPv4", "actions": "ALLOW"},
+        {"priority": 1, "dl_type": "ARP", "actions": "ALLOW"}
     ],
     "specific_rules": [
         {
             "description": "Bloquer le trafic h2 vers h4",
             "priority": 100,
             "dl_type": "IPv4",
-            "nw_src": "10.0.0.2",
-            "nw_dst": "10.0.0.4",
+            "nw_src": "10.0.0.2/32",
+            "nw_dst": "10.0.0.4/32",
+            "actions": "DENY"
+        },
+        {
+            "description": "Bloquer le trafic de retour h4 vers h2",
+            "priority": 100,
+            "dl_type": "IPv4",
+            "nw_src": "10.0.0.4/32",
+            "nw_dst": "10.0.0.2/32",
             "actions": "DENY"
         }
     ]
