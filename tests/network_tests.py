@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time
@@ -197,6 +198,91 @@ def run_automated_tests() -> int:
         if net is not None:
             info("*** 🛑 Stopping ephemeral CI network...\n")
             net.stop()
+def ip_to_host(ip: str) -> str:
+    """Convertit une IP de la topologie en nom d'hôte Mininet."""
+    mapping = {
+        "10.0.0.1": "h1",
+        "10.0.0.2": "h2",
+        "10.0.0.3": "h3",
+        "10.0.0.4": "h4"
+    }
+    return mapping.get(ip)
 
+def get_dynamic_tests():
+    """Lit les fichiers JSON pour déterminer quels tests exécuter."""
+    tests = {'deny': [], 'qos': None}
+    
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fw_path = os.path.join(base_dir, 'controller', 'policies', 'firewall.json')
+    qos_path = os.path.join(base_dir, 'controller', 'policies', 'qos.json')
+
+    # 1. Analyser le Firewall
+    try:
+        with open(fw_path, 'r') as f:
+            fw_data = json.load(f)
+            for rule in fw_data.get('rules', []):
+                if rule.get('action') == 'DENY':
+                    src = ip_to_host(rule.get('ipv4_src'))
+                    dst = ip_to_host(rule.get('ipv4_dst'))
+                    if src and dst:
+                        tests['deny'].append((src, dst))
+    except Exception as e:
+        print(f"⚠️ Impossible de lire firewall.json: {e}")
+
+    # 2. Analyser la QoS
+    try:
+        with open(qos_path, 'r') as f:
+            qos_data = json.load(f)
+            # Récupérer les limites de bande passante (conversion kbps -> mbps)
+            meters = {m['meter_id']: m['bands'][0]['rate'] / 1000 for m in qos_data.get('meters', [])}
+            
+            for rule in qos_data.get('qos_rules', []):
+                src_ip = rule.get('match', {}).get('ipv4_src')
+                for inst in rule.get('instructions', []):
+                    if inst.get('type') == 'METER':
+                        rate_mbps = meters.get(inst.get('meter_id'), 10.0)
+                        src_host = ip_to_host(src_ip)
+                        if src_host:
+                            # On choisit une destination au hasard qui n'est pas la source
+                            dst_host = "h2" if src_host != "h2" else "h3"
+                            tests['qos'] = (src_host, dst_host, rate_mbps)
+    except Exception as e:
+        print(f"⚠️ Impossible de lire qos.json: {e}")
+
+    return tests
 if __name__ == "__main__":
-    sys.exit(run_automated_tests())
+    # --- EXECUTION DYNAMIQUE DES TESTS ---
+        info("*** 🧠 Lecture automatique des politiques JSON...\n")
+        dynamic_tests = get_dynamic_tests()
+        all_passed = True
+
+        # Test d'autorisation par défaut (on prend h2 vers h3 si possible)
+        info("*** 🟢 ALLOW TEST (Default)\n")
+        if not test_allow(net, "h2", "h3"):
+            all_passed = False
+
+        # Tests DENY générés dynamiquement
+        if not dynamic_tests['deny']:
+            info("*** ⚠️ Aucun test DENY trouvé dans firewall.json.\n")
+        else:
+            for src, dst in dynamic_tests['deny']:
+                info(f"*** 🔴 DENY TEST Dynamique: {src} -> {dst}\n")
+                if not test_deny(net, src, dst):
+                    all_passed = False
+
+        # Test QoS généré dynamiquement
+        if not dynamic_tests['qos']:
+            info("*** ⚠️ Aucun test QoS trouvé dans qos.json.\n")
+        else:
+            q_src, q_dst, q_rate = dynamic_tests['qos']
+            info(f"*** 📊 QoS TEST Dynamique: {q_src} -> {q_dst} à {q_rate} Mbps\n")
+            if not test_qos(net, q_src, q_dst, q_rate):
+                all_passed = False
+
+        # Résultat final
+        if all_passed:
+            info("*** ✅ TOUS LES TESTS SONT PASSÉS AVEC SUCCÈS !\n")
+            sys.exit(0)
+        else:
+            info("*** ❌ ÉCHEC DE CERTAINS TESTS RÉSEAU.\n")
+            sys.exit(1)
