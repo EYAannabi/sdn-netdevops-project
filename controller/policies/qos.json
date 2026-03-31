@@ -7,7 +7,7 @@
       "bands": [
         {
           "type": "DROP",
-          "rate": 10000
+          "rate": 15000
         }
       ]
     }
