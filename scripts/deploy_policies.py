@@ -1,9 +1,8 @@
-# scripts/deploy_policies.py
 import json
 import os
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -51,14 +50,14 @@ def wait_for_ryu_and_switches(max_retries: int = 15, delay: int = 3) -> None:
     for attempt in range(1, max_retries + 1):
         try:
             response = requests.get(switches_url, timeout=REQUEST_TIMEOUT)
-            if response.status_code == 200:
-                switches = response.json()
-                if isinstance(switches, list) and len(switches) > 0:
-                    print(f"*** ✅ API Ryu disponible, switches connectés : {switches}")
-                    return
-                print(f"    Tentative {attempt}/{max_retries}... aucun switch connecté pour l'instant.")
-            else:
-                print(f"    Tentative {attempt}/{max_retries}... HTTP {response.status_code}")
+            response.raise_for_status()
+            switches = response.json()
+
+            if isinstance(switches, list) and len(switches) > 0:
+                print(f"*** ✅ API Ryu disponible, switches connectés : {switches}")
+                return
+
+            print(f"    Tentative {attempt}/{max_retries}... aucun switch connecté pour l'instant.")
         except requests.RequestException as e:
             print(f"    Tentative {attempt}/{max_retries}... erreur: {e}")
 
@@ -73,25 +72,74 @@ def enable_firewall_on_switch(dpid: str) -> None:
     print(f"    ✅ Firewall activé sur switch {dpid}")
 
 
+def normalize_firewall_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
+    normalized = dict(rule)
+
+    if "action" in normalized and "actions" not in normalized:
+        normalized["actions"] = normalized.pop("action")
+
+    has_ip_match = any(
+        key in normalized for key in ["nw_src", "nw_dst", "ipv4_src", "ipv4_dst"]
+    )
+
+    if has_ip_match and "dl_type" not in normalized and "eth_type" not in normalized:
+        normalized["dl_type"] = "IPv4"
+
+    return normalized
+
+
+def extract_firewall_rules(policies: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rules = []
+    rules.extend(policies.get("global_rules", []))
+    rules.extend(policies.get("specific_rules", []))
+    rules.extend(policies.get("rules", []))
+    return rules
+
+
+def validate_firewall_rule(rule: Dict[str, Any]) -> None:
+    if "actions" not in rule:
+        raise ValueError(f"Règle firewall invalide: champ 'actions' manquant -> {rule}")
+
+    if rule["actions"] not in ["ALLOW", "DENY"]:
+        raise ValueError(f"Règle firewall invalide: actions doit être ALLOW ou DENY -> {rule}")
+
+
 def deploy_firewall(dpids: List[str]) -> None:
     print("*** 🛡️ Lecture et injection des politiques Firewall (Policy as Code)...")
     policies = load_json_file(FIREWALL_POLICY_PATH)
+    rules = extract_firewall_rules(policies)
 
-    global_rules = policies.get("global_rules", [])
-    specific_rules = policies.get("specific_rules", [])
+    if not rules:
+        print("    ⚠️ Aucune règle firewall trouvée.")
+        return
+
+    normalized_rules = []
+    for rule in rules:
+        nr = normalize_firewall_rule(rule)
+        validate_firewall_rule(nr)
+        normalized_rules.append(nr)
 
     for dpid in dpids:
         enable_firewall_on_switch(dpid)
 
-        for rule in global_rules:
+        for rule in normalized_rules:
             url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
             http_post(url, rule)
-            print(f"    ✅ Règle globale appliquée sur {dpid}: {rule}")
+            print(f"    ✅ Règle firewall appliquée sur {dpid}: {rule.get('description', rule)}")
 
-        for rule in specific_rules:
-            url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
-            http_post(url, rule)
-            print(f"    ✅ Règle spécifique appliquée sur {dpid}: {rule.get('description', rule)}")
+
+def validate_meter(meter: Dict[str, Any]) -> None:
+    if "meter_id" not in meter:
+        raise ValueError(f"Meter invalide: meter_id manquant -> {meter}")
+    if "bands" not in meter or not meter["bands"]:
+        raise ValueError(f"Meter invalide: bands manquant/vide -> {meter}")
+
+
+def validate_qos_rule(rule: Dict[str, Any]) -> None:
+    if "match" not in rule:
+        raise ValueError(f"Règle QoS invalide: match manquant -> {rule}")
+    if "instructions" not in rule or not rule["instructions"]:
+        raise ValueError(f"Règle QoS invalide: instructions manquantes -> {rule}")
 
 
 def deploy_qos(dpids: List[int]) -> None:
@@ -102,9 +150,14 @@ def deploy_qos(dpids: List[int]) -> None:
         return
 
     qos_data = load_json_file(QOS_POLICY_PATH)
-
     meters = qos_data.get("meters", [])
     qos_rules = qos_data.get("qos_rules", [])
+
+    for meter in meters:
+        validate_meter(meter)
+
+    for rule in qos_rules:
+        validate_qos_rule(rule)
 
     for dpid in dpids:
         for meter in meters:

@@ -1,40 +1,40 @@
 {
-    "meters": [
+  "meters": [
+    {
+      "description": "Limiter le débit à 10 Mbps",
+      "flags": "KBPS",
+      "meter_id": 1,
+      "bands": [
         {
-            "description": "Limiteur de bande passante a 10 Mbps",
-            "flags": "KBPS",
-            "meter_id": 1,
-            "bands": [
-                {
-                    "type": "DROP",
-                    "rate": 10000
-                }
-            ]
+          "type": "DROP",
+          "rate": 10000
         }
-    ],
-    "qos_rules": [
+      ]
+    }
+  ],
+  "qos_rules": [
+    {
+      "description": "Appliquer le meter 1 au trafic IPv4 sortant de h4",
+      "priority": 150,
+      "match": {
+        "eth_type": 2048,
+        "ipv4_src": "10.0.0.4"
+      },
+      "instructions": [
         {
-            "description": "Appliquer le Meter 1 au trafic de h4",
-            "priority": 150,
-            "match": {
-                "eth_type": 2048,
-                "ipv4_src": "10.0.0.4"
-            },
-            "instructions": [
-                {
-                    "type": "METER",
-                    "meter_id": 1
-                },
-                {
-                    "type": "APPLY_ACTIONS",
-                    "actions": [
-                        {
-                            "type": "OUTPUT",
-                            "port": "NORMAL"
-                        }
-                    ]
-                }
-            ]
+          "type": "METER",
+          "meter_id": 1
+        },
+        {
+          "type": "APPLY_ACTIONS",
+          "actions": [
+            {
+              "type": "OUTPUT",
+              "port": "NORMAL"
+            }
+          ]
         }
-    ]
+      ]
+    }
+  ]
 }
