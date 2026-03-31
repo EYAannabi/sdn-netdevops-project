@@ -1,40 +1,10 @@
 {
-  "meters": [
+  "policing_rules": [
     {
-      "description": "Limiter le débit à 10 Mbps",
-      "flags": "KBPS",
-      "meter_id": 1,
-      "bands": [
-        {
-          "type": "DROP",
-          "rate": 10000
-        }
-      ]
-    }
-  ],
-  "qos_rules": [
-    {
-      "description": "Appliquer le meter 1 au trafic IPv4 sortant de h4 ET le transférer",
-      "priority": 200,
-      "match": {
-        "eth_type": 2048,
-        "ipv4_src": "10.0.0.4"
-      },
-      "instructions": [
-        {
-          "type": "METER",
-          "meter_id": 1
-        },
-        {
-          "type": "APPLY_ACTIONS",
-          "actions": [
-            {
-              "type": "OUTPUT",
-              "port": "NORMAL"
-            }
-          ]
-        }
-      ]
+      "description": "Limiter le trafic entrant sur le port de h4 a 10 Mbps",
+      "interface": "s4-eth2",
+      "rate_kbps": 10000,
+      "burst_kb": 1000
     }
   ]
 }
