@@ -30,7 +30,20 @@ HOST_EDGE_SWITCH = {
 # Pour les APIs OpenFlow /stats/*
 OF_DPIDS = [1, 2, 3, 4]
 #QOS_DPIDS = [4]
+def apply_ovs_ingress_policing(interface: str, rate_kbps: int, burst_kb: int) -> None:
+    cmd_rate = [
+        "sudo", "ovs-vsctl", "set", "interface", interface,
+        f"ingress_policing_rate={rate_kbps}"
+    ]
+    cmd_burst = [
+        "sudo", "ovs-vsctl", "set", "interface", interface,
+        f"ingress_policing_burst={burst_kb}"
+    ]
 
+    subprocess.run(cmd_rate, check=True)
+    subprocess.run(cmd_burst, check=True)
+
+    print(f"    ✅ QoS policing appliqué sur {interface}: rate={rate_kbps} kbps, burst={burst_kb} kb")
 def get_qos_dpids_for_rule(rule: Dict[str, Any]) -> List[int]:
     match = rule.get("match", {})
     src_ip = match.get("ipv4_src") or match.get("nw_src")
@@ -270,63 +283,32 @@ def validate_qos_rule(rule: Dict[str, Any]) -> None:
         raise ValueError(f"Règle QoS invalide: match manquant -> {rule}")
     if "instructions" not in rule or not rule["instructions"]:
         raise ValueError(f"Règle QoS invalide: instructions manquantes -> {rule}")
-        
+
 def deploy_qos() -> None:
-    print("*** 📊 Lecture et injection des politiques QoS (via OVS Policing)...")
+    print("*** 📊 Lecture et injection des politiques QoS (Policy as Code)...")
 
     if not os.path.exists(QOS_POLICY_PATH):
         print("    ⚠️ Fichier qos.json introuvable, QoS ignorée.")
         return
 
     qos_data = load_json_file(QOS_POLICY_PATH)
-    meters = qos_data.get("meters", [])
-    qos_rules = qos_data.get("qos_rules", [])
+    policing_rules = qos_data.get("policing_rules", [])
 
-    if not meters and not qos_rules:
+    if not policing_rules:
         print("    ⚠️ Aucune politique QoS définie.")
         return
 
-    # 1. Créer un dictionnaire pour lier facilement un meter_id à son rate (débit)
-    meter_rates = {}
-    for meter in meters:
-        meter_id = meter.get("meter_id")
-        bands = meter.get("bands", [])
-        if meter_id is not None and bands:
-            # Le rate est en kbps dans le json
-            meter_rates[meter_id] = bands[0].get("rate", 0)
+    for rule in policing_rules:
+        interface = rule.get("interface")
+        rate_kbps = rule.get("rate_kbps")
+        burst_kb = rule.get("burst_kb", 1000)
 
-    # 2. Parcourir les règles QoS pour les appliquer sur les ports OVS
-    for rule in qos_rules:
-        match = rule.get("match", {})
-        src_ip = match.get("ipv4_src")
+        if not interface or rate_kbps is None:
+            raise ValueError(f"Règle QoS invalide: {rule}")
 
-        if not src_ip:
-            continue
-
-        # Trouver le meter associé à cette règle
-        instructions = rule.get("instructions", [])
-        meter_id = None
-        for inst in instructions:
-            if inst.get("type") == "METER":
-                meter_id = inst.get("meter_id")
-
-        if meter_id is not None and meter_id in meter_rates:
-            rate_kbps = meter_rates[meter_id]
-            burst = int(rate_kbps * 0.1)  # Le burst est généralement de 10% du rate
-
-            try:
-                # Déduire le port (ex: s4-eth2) à partir de l'IP (ex: 10.0.0.4)
-                port_name = get_port_name_for_qos_source(src_ip)
-                print(f"    ⚙️  Application de la QoS sur {port_name} (Source: {src_ip}) : {rate_kbps} kbps")
-
-                # Exécuter les commandes système pour limiter le débit
-                subprocess.run(["sudo", "ovs-vsctl", "set", "interface", port_name, f"ingress_policing_rate={rate_kbps}"], check=True)
-                subprocess.run(["sudo", "ovs-vsctl", "set", "interface", port_name, f"ingress_policing_burst={burst}"], check=True)
-                
-                print(f"    ✅ QoS appliquée avec succès sur {port_name} !")
-            except Exception as e:
-                print(f"    ❌ Erreur lors de l'application de la QoS sur {src_ip} : {e}")
-
+        apply_ovs_ingress_policing(interface, int(rate_kbps), int(burst_kb))
+        print(f"    ✅ Règle QoS appliquée: {rule.get('description', rule)}")
+        
 def main() -> int:
     try:
         wait_for_ryu_and_switches()
