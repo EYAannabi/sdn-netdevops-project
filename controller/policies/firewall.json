@@ -15,19 +15,11 @@
   ],
   "specific_rules": [
     {
-      "description": "Bloquer le trafic IPv4 h2 vers h4",
+      "description": "Bloquer le trafic IPv4 h3 vers h1",
       "priority": 65000,
       "dl_type": "IPv4",
-      "nw_src": "10.0.0.2",
-      "nw_dst": "10.0.0.4",
-      "actions": "DENY"
-    },
-    {
-      "description": "Bloquer le trafic IPv4 h4 vers h2",
-      "priority": 65000,
-      "dl_type": "IPv4",
-      "nw_src": "10.0.0.4",
-      "nw_dst": "10.0.0.2",
+      "nw_src": "10.0.0.3",
+      "nw_dst": "10.0.0.1",
       "actions": "DENY"
     }
   ]

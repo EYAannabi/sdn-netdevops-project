@@ -1,4 +1,9 @@
 {
-  "meters": [],
-  "qos_rules": []
+  "type": "APPLY_ACTIONS",
+  "actions": [
+    {
+      "type": "OUTPUT",
+      "port": "NORMAL"
+    }
+  ]
 }
