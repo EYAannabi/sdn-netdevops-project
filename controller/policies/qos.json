@@ -3,7 +3,7 @@
     {
       "description": "Limiter le trafic entrant sur le port de h4 a 10 Mbps",
       "interface": "s4-eth2",
-      "rate_kbps": 15000,
+      "rate_kbps": 10000,
       "burst_kb": 1000
     }
   ]
