@@ -5,19 +5,21 @@
     ],
     "specific_rules": [
         {
-            "description": "Bloquer le trafic h2 vers h3",
+            "description": "Bloquer le trafic ICMP (Ping) h2 vers h3",
             "priority": 100,
             "dl_type": "IPv4",
-            "nw_src": "10.0.0.2",
-            "nw_dst": "10.0.0.3",
+            "nw_proto": "ICMP",
+            "nw_src": "10.0.0.2/32",
+            "nw_dst": "10.0.0.3/32",
             "actions": "DENY"
         },
         {
-            "description": "Bloquer le trafic de retour h3 vers h2",
+            "description": "Bloquer le trafic ICMP (Ping) de retour h3 vers h2",
             "priority": 100,
             "dl_type": "IPv4",
-            "nw_src": "10.0.0.3",
-            "nw_dst": "10.0.0.2",
+            "nw_proto": "ICMP",
+            "nw_src": "10.0.0.3/32",
+            "nw_dst": "10.0.0.2/32",
             "actions": "DENY"
         }
     ]
