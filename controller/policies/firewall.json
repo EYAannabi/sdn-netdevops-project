@@ -5,19 +5,19 @@
     ],
     "specific_rules": [
         {
-            "description": "Bloquer le trafic h1 vers h4",
+            "description": "Bloquer le trafic h2 vers h3",
             "priority": 100,
             "dl_type": "IPv4",
-            "nw_src": "10.0.0.1/32",
-            "nw_dst": "10.0.0.4/32",
+            "nw_src": "10.0.0.2/32",
+            "nw_dst": "10.0.0.3/32",
             "actions": "DENY"
         },
         {
-            "description": "Bloquer le trafic de retour h4 vers h1",
+            "description": "Bloquer le trafic de retour h3 vers h2",
             "priority": 100,
             "dl_type": "IPv4",
-            "nw_src": "10.0.0.4/32",
-            "nw_dst": "10.0.0.1/32",
+            "nw_src": "10.0.0.3/32",
+            "nw_dst": "10.0.0.2/32",
             "actions": "DENY"
         }
     ]
