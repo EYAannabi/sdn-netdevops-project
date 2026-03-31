@@ -20,10 +20,24 @@ FIREWALL_DPIDS = [
     "0000000000000003",
     "0000000000000004",
 ]
+HOST_EDGE_SWITCH = {
+    "10.0.0.1": 3,  # h1 sur s3
+    "10.0.0.2": 3,  # h2 sur s3
+    "10.0.0.3": 4,  # h3 sur s4
+    "10.0.0.4": 4   # h4 sur s4
+}
 
 # Pour les APIs OpenFlow /stats/*
 OF_DPIDS = [1, 2, 3, 4]
-QOS_DPIDS = [4]
+#QOS_DPIDS = [4]
+def get_qos_dpids_for_rule(rule: Dict[str, Any]) -> List[int]:
+    match = rule.get("match", {})
+    src_ip = match.get("ipv4_src") or match.get("nw_src")
+    if not src_ip:
+        return []
+    src_ip = src_ip.split("/")[0]
+    dpid = HOST_EDGE_SWITCH.get(src_ip)
+    return [dpid] if dpid is not None else []
 
 def load_json_file(path: str) -> Dict[str, Any]:
     if not os.path.exists(path):
@@ -222,15 +236,21 @@ def deploy_qos() -> None:
     for rule in qos_rules:
         validate_qos_rule(rule)
 
-    for dpid in QOS_DPIDS:
-        for meter in meters:
-            meter_payload = {"dpid": dpid}
-            meter_payload.update(meter)
-            url = f"{RYU_BASE_URL}/stats/meterentry/add"
-            http_post(url, meter_payload)
-            print(f"    ✅ Meter appliqué sur switch {dpid}: {meter.get('description', meter)}")
+    for rule in qos_rules:
+        target_dpids = get_qos_dpids_for_rule(rule)
 
-        for rule in qos_rules:
+        if not target_dpids:
+            print(f"    ⚠️ Impossible de déterminer le switch cible pour la règle QoS: {rule}")
+            continue
+
+        for dpid in target_dpids:
+            for meter in meters:
+                meter_payload = {"dpid": dpid}
+                meter_payload.update(meter)
+                url = f"{RYU_BASE_URL}/stats/meterentry/add"
+                http_post(url, meter_payload)
+                print(f"    ✅ Meter appliqué sur switch {dpid}: {meter.get('description', meter)}")
+
             rule_payload = {"dpid": dpid}
             rule_payload.update(rule)
             url = f"{RYU_BASE_URL}/stats/flowentry/add"
