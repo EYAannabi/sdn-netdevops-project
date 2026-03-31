@@ -5,6 +5,7 @@ import time
 import subprocess
 import re
 from functools import partial
+import itertools
 
 from mininet.net import Mininet
 from mininet.node import RemoteController, OVSKernelSwitch
@@ -41,42 +42,45 @@ def ip_to_host(ip: str) -> str:
     clean_ip = ip.split('/')[0]
     mapping = {
         "10.0.0.1": "h1",
-        "10.0.0.2": "h2",
-        "10.0.0.3": "h3",
-        "10.0.0.4": "h4"
-    }
-    return mapping.get(clean_ip)
-
-# --- MAGIE NETDEVOPS : LECTURE DYNAMIQUE DES JSON ---
+# --- MAGIE NETDEVOPS : LECTURE 100% DYNAMIQUE DES JSON ---
 def get_dynamic_tests():
-    """Lit les fichiers JSON pour déterminer quels tests exécuter automatiquement."""
-    tests = {'allow': [("h1", "h4")], 'deny': [], 'qos': None}
-    #tests = {'allow': [("h2", "h3")], 'deny': [], 'qos': None}
+    """Lit les fichiers JSON pour déterminer dynamiquement quels tests exécuter."""
+    hosts = ["h1", "h2", "h3", "h4"]
+    
+    # 1. Générer toutes les paires de communication possibles (par défaut, tout est ALLOW)
+    all_pairs = list(itertools.permutations(hosts, 2))
+    tests = {'allow': all_pairs, 'deny': [], 'qos': None}
     
     fw_path = os.path.join(PROJECT_ROOT, "controller", "policies", "firewall.json")
     qos_path = os.path.join(PROJECT_ROOT, "controller", "policies", "qos.json")
 
-    # 1. Parsing du Firewall
+    # 2. Parsing du Firewall
     if os.path.exists(fw_path):
         try:
             with open(fw_path, 'r') as f:
                 fw_data = json.load(f)
-                # Gérer différentes structures JSON potentielles (rules ou specific_rules)
                 rules_list = fw_data.get('rules', fw_data.get('specific_rules', []))
                 for rule in rules_list:
                     action = rule.get('action', rule.get('actions'))
                     if action == 'DENY':
-                        # Gérer nw_src ou ipv4_src
-                        src_ip = rule.get('ipv4_src', rule.get('nw_src'))
-                        dst_ip = rule.get('ipv4_dst', rule.get('nw_dst'))
+                        # Gérer les différents formats JSON possibles (imbriqué ou plat)
+                        match = rule.get('match', rule)
+                        src_ip = match.get('ipv4_src', match.get('nw_src', ''))
+                        dst_ip = match.get('ipv4_dst', match.get('nw_dst', ''))
+                        
                         src = ip_to_host(src_ip)
                         dst = ip_to_host(dst_ip)
+                        
                         if src and dst:
-                            tests['deny'].append((src, dst))
+                            if (src, dst) not in tests['deny']:
+                                tests['deny'].append((src, dst))
+                            # Retirer cette paire des tests ALLOW puisqu'elle doit être bloquée
+                            if (src, dst) in tests['allow']:
+                                tests['allow'].remove((src, dst))
         except Exception as e:
             info(f"⚠️ Erreur lecture firewall.json: {e}\n")
 
-    # 2. Parsing de la QoS
+    # 3. Parsing de la QoS
     if os.path.exists(qos_path):
         try:
             with open(qos_path, 'r') as f:
@@ -84,19 +88,22 @@ def get_dynamic_tests():
                 meters = {m['meter_id']: m['bands'][0]['rate'] / 1000.0 for m in qos_data.get('meters', [])}
                 
                 for rule in qos_data.get('qos_rules', []):
-                    src_ip = rule.get('match', {}).get('ipv4_src')
+                    match_data = rule.get('match', {})
+                    src_ip = match_data.get('ipv4_src', match_data.get('nw_src', ''))
+                    
                     for inst in rule.get('instructions', []):
                         if inst.get('type') == 'METER' and inst.get('meter_id') in meters:
                             rate_mbps = meters[inst.get('meter_id')]
                             src_host = ip_to_host(src_ip)
                             if src_host:
-                                dst_host = "h3" if src_host == "h2" else "h2"
+                                # Choisir dynamiquement une destination valide pour iperf
+                                dst_host = "h2" if src_host != "h2" else "h3"
                                 tests['qos'] = (src_host, dst_host, rate_mbps)
         except Exception as e:
             info(f"⚠️ Erreur lecture qos.json: {e}\n")
 
     return tests
-
+    
 # --- FONCTIONS DE TESTS RÉSEAU ---
 def test_ping_allowed(net: Mininet, src_name: str, dst_name: str) -> bool:
     info(f"*** 🟢 ALLOW TEST: {src_name} -> {dst_name}\n")
