@@ -14,7 +14,7 @@
   ],
   "qos_rules": [
     {
-      "description": "Appliquer le meter 1 au trafic IPv4 sortant de h4",
+      "description": "Appliquer le meter 1 au trafic IPv4 sortant de h4 ET le transférer",
       "priority": 200,
       "match": {
         "eth_type": 2048,
@@ -24,6 +24,15 @@
         {
           "type": "METER",
           "meter_id": 1
+        },
+        {
+          "type": "APPLY_ACTIONS",
+          "actions": [
+            {
+              "type": "OUTPUT",
+              "port": "NORMAL"
+            }
+          ]
         }
       ]
     }
