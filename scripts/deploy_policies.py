@@ -3,7 +3,7 @@ import os
 import sys
 import time
 from typing import Any, Dict, List
-
+import subprocess
 import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -270,10 +270,9 @@ def validate_qos_rule(rule: Dict[str, Any]) -> None:
         raise ValueError(f"Règle QoS invalide: match manquant -> {rule}")
     if "instructions" not in rule or not rule["instructions"]:
         raise ValueError(f"Règle QoS invalide: instructions manquantes -> {rule}")
-
-
+        
 def deploy_qos() -> None:
-    print("*** 📊 Lecture et injection des politiques QoS (Policy as Code)...")
+    print("*** 📊 Lecture et injection des politiques QoS (via OVS Policing)...")
 
     if not os.path.exists(QOS_POLICY_PATH):
         print("    ⚠️ Fichier qos.json introuvable, QoS ignorée.")
@@ -287,9 +286,46 @@ def deploy_qos() -> None:
         print("    ⚠️ Aucune politique QoS définie.")
         return
 
-    print("    ⚠️ Déploiement QoS ignoré dans le pipeline CI avec l'architecture contrôleur actuelle.")
-    print("    ⚠️ La validation QoS sera faite séparément dans Mininet (iperf + dump-flows + Grafana).")
-    return
+    # 1. Créer un dictionnaire pour lier facilement un meter_id à son rate (débit)
+    meter_rates = {}
+    for meter in meters:
+        meter_id = meter.get("meter_id")
+        bands = meter.get("bands", [])
+        if meter_id is not None and bands:
+            # Le rate est en kbps dans le json
+            meter_rates[meter_id] = bands[0].get("rate", 0)
+
+    # 2. Parcourir les règles QoS pour les appliquer sur les ports OVS
+    for rule in qos_rules:
+        match = rule.get("match", {})
+        src_ip = match.get("ipv4_src")
+
+        if not src_ip:
+            continue
+
+        # Trouver le meter associé à cette règle
+        instructions = rule.get("instructions", [])
+        meter_id = None
+        for inst in instructions:
+            if inst.get("type") == "METER":
+                meter_id = inst.get("meter_id")
+
+        if meter_id is not None and meter_id in meter_rates:
+            rate_kbps = meter_rates[meter_id]
+            burst = int(rate_kbps * 0.1)  # Le burst est généralement de 10% du rate
+
+            try:
+                # Déduire le port (ex: s4-eth2) à partir de l'IP (ex: 10.0.0.4)
+                port_name = get_port_name_for_qos_source(src_ip)
+                print(f"    ⚙️  Application de la QoS sur {port_name} (Source: {src_ip}) : {rate_kbps} kbps")
+
+                # Exécuter les commandes système pour limiter le débit
+                subprocess.run(["sudo", "ovs-vsctl", "set", "interface", port_name, f"ingress_policing_rate={rate_kbps}"], check=True)
+                subprocess.run(["sudo", "ovs-vsctl", "set", "interface", port_name, f"ingress_policing_burst={burst}"], check=True)
+                
+                print(f"    ✅ QoS appliquée avec succès sur {port_name} !")
+            except Exception as e:
+                print(f"    ❌ Erreur lors de l'application de la QoS sur {src_ip} : {e}")
 
 def main() -> int:
     try:
