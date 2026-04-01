@@ -19,7 +19,7 @@ services:
     container_name: prometheus
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      # 👇 1. AJOUTE CECI : Sauvegarde l'historique des métriques
+      # Sauvegarde l'historique des métriques
       - prometheus_data:/prometheus 
     ports:
       - "9090:9090"
@@ -33,8 +33,19 @@ services:
     ports:
       - "3001:3000"
     volumes:
-      # 👇 2. AJOUTE CECI : Sauvegarde tes Dashboards et Data Sources
+      # Sauvegarde tes Dashboards et Data Sources
       - grafana_data:/var/lib/grafana 
+    networks:
+      - sdn_net
+    restart: unless-stopped
+
+  # 👇 NOUVEAU SERVICE SFLOW-RT AJOUTÉ ICI
+  sflow-rt:
+    image: sflow/prometheus
+    container_name: sflow-rt
+    ports:
+      - "6343:6343/udp"  # Port UDP où les switchs OVS envoient les paquets sFlow
+      - "8008:8008"      # Port TCP pour l'API sFlow-RT et Prometheus
     networks:
       - sdn_net
     restart: unless-stopped
@@ -43,7 +54,7 @@ networks:
   sdn_net:
     external: true
 
-# 👇 3. AJOUTE CE BLOC TOUT EN BAS : Déclaration des disques durs virtuels
+# Déclaration des disques durs virtuels
 volumes:
   grafana_data:
   prometheus_data:

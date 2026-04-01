@@ -1,0 +1,73 @@
+- name: Vérifier que le réseau Docker sdn_net existe
+  command: docker network inspect sdn_net
+  register: docker_net_check
+  changed_when: false
+
+- name: Lancer la stack monitoring
+  command: docker compose up -d
+  args:
+    chdir: "{{ playbook_dir }}/../../"
+
+- name: Attendre que sFlow-RT réponde
+  uri:
+    url: http://127.0.0.1:8008
+    method: GET
+    status_code: 200
+  register: sflowrt_check
+  retries: 10
+  delay: 3
+  until: sflowrt_check.status == 200
+
+- name: Activer sFlow sur s1
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s1
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s1 sflow=@sflow
+  become: yes
+
+- name: Activer sFlow sur s2
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s2
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s2 sflow=@sflow
+  become: yes
+
+- name: Activer sFlow sur s3
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s3
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s3 sflow=@sflow
+  become: yes
+
+- name: Activer sFlow sur s4
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s4
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s4 sflow=@sflow
+  become: yes
+
+- name: Vérifier les targets Prometheus
+  uri:
+    url: http://127.0.0.1:9090/api/v1/targets
+    method: GET
+    status_code: 200
+  register: prometheus_targets
+  retries: 10
+  delay: 3
+  until: prometheus_targets.status == 200
+
+- name: Afficher confirmation sFlow
+  debug:
+    msg: "sFlow-RT et Prometheus sont démarrés et sFlow est activé sur les bridges OVS."

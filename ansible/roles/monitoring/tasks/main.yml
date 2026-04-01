@@ -6,7 +6,7 @@
   ignore_errors: true
 
 - name: Force remove specific containers just in case
-  shell: docker rm -f grafana prometheus ryu_exporter || true
+  shell: docker rm -f grafana prometheus ryu_exporter sflow-rt || true
 
 - name: Ensure monitoring stack is started
   shell: docker-compose up -d --build
@@ -18,3 +18,83 @@
 - name: Show monitoring deployment result
   debug:
     msg: "{{ monitoring_result.stdout_lines }}"
+
+- name: Wait for Prometheus to be ready
+  uri:
+    url: http://127.0.0.1:9090/-/healthy
+    method: GET
+    status_code: 200
+  register: prometheus_health
+  retries: 10
+  delay: 3
+  until: prometheus_health.status == 200
+
+- name: Wait for Grafana to be ready
+  uri:
+    url: http://127.0.0.1:3001/login
+    method: GET
+    status_code: 200
+  register: grafana_health
+  retries: 10
+  delay: 3
+  until: grafana_health.status == 200
+
+- name: Wait for sFlow-RT to be ready
+  uri:
+    url: http://127.0.0.1:8008
+    method: GET
+    status_code: 200
+  register: sflowrt_health
+  retries: 10
+  delay: 3
+  until: sflowrt_health.status == 200
+
+- name: Enable sFlow on s1
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s1
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s1 sflow=@sflow
+  become: yes
+
+- name: Enable sFlow on s2
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s2
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s2 sflow=@sflow
+  become: yes
+
+- name: Enable sFlow on s3
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s3
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s3 sflow=@sflow
+  become: yes
+
+- name: Enable sFlow on s4
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s4
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s4 sflow=@sflow
+  become: yes
+
+- name: Check sFlow configuration
+  shell: ovs-vsctl list sflow
+  become: yes
+  register: sflow_check
+  changed_when: false
+
+- name: Show sFlow configuration
+  debug:
+    msg: "{{ sflow_check.stdout_lines }}"

@@ -5,3 +5,31 @@ scrape_configs:
   - job_name: 'ryu_exporter'
     static_configs:
       - targets: ['ryu_exporter:8000']
+
+  # 👇 NOUVEAUX JOBS POUR SFLOW-RT AJOUTÉS ICI
+  - job_name: 'sflow-rt-analyzer'
+    metrics_path: /prometheus/analyzer/txt
+    static_configs:
+      - targets: ['sflow-rt:8008']
+
+  - job_name: 'sflow-rt-metrics'
+    metrics_path: /prometheus/metrics/ALL/ALL/txt
+    static_configs:
+      - targets: ['sflow-rt:8008']
+    metric_relabel_configs:
+      - source_labels: ['agent', 'datasource']
+        separator: ':'
+        target_label: instance
+
+  - job_name: 'sflow-rt-flows'
+    metrics_path: /app/prometheus/scripts/export.js/flows/ALL/txt
+    static_configs:
+      - targets: ['sflow-rt:8008']
+    params:
+      metric: ['sflow_flows_bps']
+      key: ['ipsource', 'ipdestination']
+      value: ['bytes']
+      scale: ['8']
+      aggMode: ['sum']
+      minValue: ['100']
+      maxFlows: ['100']
