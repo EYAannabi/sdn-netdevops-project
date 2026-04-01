@@ -5,25 +5,3 @@
 - name: Include LAB topology tasks
   include_tasks: lab.yml
   when: topology_mode == "lab"
-- name: Wait for Mininet switches to be created
-  pause:
-    seconds: 10
-
-- name: Enable sFlow on all switches
-  shell: >
-    ovs-vsctl -- --id=@sflow create sflow agent=eth0 target=\"127.0.0.1:6343\" header=128 sampling=10 polling=1 \
-    -- set bridge s1 sflow=@sflow \
-    -- set bridge s2 sflow=@sflow \
-    -- set bridge s3 sflow=@sflow \
-    -- set bridge s4 sflow=@sflow
-  become: yes
-
-- name: Check sFlow configuration
-  shell: ovs-vsctl list sflow
-  become: yes
-  register: sflow_check
-  changed_when: false
-
-- name: Show sFlow configuration
-  debug:
-    msg: "{{ sflow_check.stdout_lines }}"

@@ -8,6 +8,6 @@
 
   roles:
     - controller
-    - monitoring
     - topology
+    - monitoring
     - firewall
