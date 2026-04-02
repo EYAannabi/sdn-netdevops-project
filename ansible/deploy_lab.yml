@@ -10,4 +10,4 @@
     - controller
     - topology
     - monitoring
-    #- firewall
+    - firewall
