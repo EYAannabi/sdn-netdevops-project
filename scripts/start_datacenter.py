@@ -18,7 +18,7 @@ def start_prod():
     info("*** Starting the datacenter (production environment)...\n")
 
     topo = DatacenterTopo()
-    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13")
+    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13", )
 
     # Create the network with QoS-capable links.
     net = Mininet(topo=topo, link=TCLink, controller=None)
