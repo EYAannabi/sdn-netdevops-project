@@ -5,7 +5,7 @@ import time
 
 import requests
 
-RYU_HEALTH_URL = "http://127.0.0.1:8080/firewall/module/status"
+RYU_HEALTH_URL = "http://127.0.0.1:8080/stats/switches"
 TOPOLOGY_PROCESS_NAME = "start_lab_topology.py"
 
 
@@ -23,7 +23,11 @@ def main():
         if response.status_code != 200:
             print(f"Ryu API unhealthy: HTTP {response.status_code}")
             sys.exit(1)
-        print("Ryu REST API is operational")
+        switches = response.json()
+        if not isinstance(switches, list):
+            print(f"Unexpected Ryu API response: {switches}")
+            sys.exit(1)
+        print(f"Ryu REST API is operational, connected switches: {switches}")
     except Exception as e:
         print(f"Ryu API error: {e}")
         sys.exit(1)
