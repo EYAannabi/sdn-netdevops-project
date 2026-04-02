@@ -1,0 +1,13 @@
+switches:
+  "0000000000000001":
+    bridge:
+      priority: 28672   # root principal
+  "0000000000000002":
+    bridge:
+      priority: 32768   # root secondaire
+  "0000000000000003":
+    bridge:
+      priority: 36864
+  "0000000000000004":
+    bridge:
+      priority: 40960

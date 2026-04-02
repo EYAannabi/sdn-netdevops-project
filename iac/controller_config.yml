@@ -1,7 +1,6 @@
 controller:
   apps:
-    #- ryu.app.simple_switch_stp_13
-    - ryu.app.simple_switch_13
+    - controller.stp_switch
     - ryu.app.ofctl_rest
     - ryu.app.rest_firewall
   of_port: 6653
