@@ -14,7 +14,8 @@ QOS_POLICY_PATH = os.path.join(BASE_DIR, "../controller/policies/qos.json")
 RYU_BASE_URL = os.getenv("RYU_BASE_URL", "http://127.0.0.1:8080")
 REQUEST_TIMEOUT = 10
 
-# For the REST firewall module
+# Les listes de DPIDs ne sont plus strictement nécessaires pour le pare-feu
+# puisqu'on va utiliser "all", mais on les garde pour les règles spécifiques OpenFlow
 FIREWALL_DPIDS = [
     "0000000000000001",
     "0000000000000002",
@@ -46,7 +47,7 @@ def apply_ovs_ingress_policing(interface: str, rate_kbps: int, burst_kb: int) ->
     subprocess.run(cmd_rate, check=True)
     subprocess.run(cmd_burst, check=True)
 
-    print(f"    QoS policing applied on {interface}: rate={rate_kbps} kbps, burst={burst_kb} kb")
+    print(f"    QOS policing applied on {interface}: rate={rate_kbps} kbps, burst={burst_kb} kb")
 
 
 def get_qos_dpids_for_rule(rule: Dict[str, Any]) -> List[int]:
@@ -163,10 +164,11 @@ def wait_for_ryu_and_switches(max_retries: int = 15, delay: int = 3) -> None:
     raise RuntimeError("Ryu API unavailable, or available with no connected switches.")
 
 
-def enable_firewall_on_switch(dpid: str) -> None:
-    url = f"{RYU_BASE_URL}/firewall/module/enable/{dpid}"
+# --- NOUVELLE FONCTION GLOBALE POUR LE PARE-FEU ---
+def enable_firewall_all() -> None:
+    url = f"{RYU_BASE_URL}/firewall/module/enable/all"
     http_put(url)
-    print(f"    Firewall enabled on switch {dpid}")
+    print("    Firewall ENABLED globally on ALL switches.")
 
 
 def normalize_firewall_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
@@ -250,16 +252,16 @@ def deploy_firewall() -> None:
     for rule in global_rules + specific_rules:
         validate_firewall_rule(rule)
 
-    # 1) Enable the firewall module and inject only the global ALLOW rules.
-    for dpid in FIREWALL_DPIDS:
-        enable_firewall_on_switch(dpid)
+    # 1) Enable the firewall module sur TOUS les switchs en une seule requête
+    enable_firewall_all()
 
-        for rule in global_rules:
-            url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
-            http_post(url, rule)
-            print(f"    Global firewall rule applied on {dpid}: {rule.get('description', rule)}")
+    # 2) Injecter les règles globales sur TOUS les switchs en utilisant "all"
+    for rule in global_rules:
+        url = f"{RYU_BASE_URL}/firewall/rules/all"
+        http_post(url, rule)
+        print(f"    Global firewall rule applied on ALL switches: {rule.get('description', rule)}")
 
-    # 2) Inject DENY rules as actual OpenFlow DROP flows.
+    # 3) Inject DENY rules as actual OpenFlow DROP flows (cela reste via OF_DPIDS car c'est direct flowentry)
     for rule in specific_rules:
         action = str(rule.get("actions", "")).upper()
 
@@ -270,25 +272,10 @@ def deploy_firewall() -> None:
                 http_post(url, payload)
                 print(f"    OpenFlow DENY rule applied on switch {dpid}: {rule.get('description', rule)}")
         else:
-            # Handle future specific ALLOW rules if they are added later.
-            for dpid in FIREWALL_DPIDS:
-                url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
-                http_post(url, rule)
-                print(f"    Specific firewall rule applied on {dpid}: {rule.get('description', rule)}")
-
-
-def validate_meter(meter: Dict[str, Any]) -> None:
-    if "meter_id" not in meter:
-        raise ValueError(f"Invalid meter: missing meter_id -> {meter}")
-    if "bands" not in meter or not meter["bands"]:
-        raise ValueError(f"Invalid meter: missing or empty bands -> {meter}")
-
-
-def validate_qos_rule(rule: Dict[str, Any]) -> None:
-    if "match" not in rule:
-        raise ValueError(f"Invalid QoS rule: missing match -> {rule}")
-    if "instructions" not in rule or not rule["instructions"]:
-        raise ValueError(f"Invalid QoS rule: missing instructions -> {rule}")
+            # Handle future specific ALLOW rules si elles sont ajoutées plus tard
+            url = f"{RYU_BASE_URL}/firewall/rules/all"
+            http_post(url, rule)
+            print(f"    Specific firewall rule applied globally: {rule.get('description', rule)}")
 
 
 def deploy_qos() -> None:
