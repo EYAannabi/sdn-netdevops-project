@@ -31,7 +31,47 @@ HOST_EDGE_SWITCH = {
 
 # For the OpenFlow /stats/* APIs
 OF_DPIDS = [1, 2, 3, 4]
+def get_firewall_status() -> Dict[str, str]:
+    url = f"{RYU_BASE_URL}/firewall/module/status"
+    response = http_get(url)
+    data = response.json()
+    return {item["switch_id"]: item["status"] for item in data}
 
+
+def wait_for_firewall_enabled(dpid: str, retries: int = 10, delay: int = 3) -> None:
+    for attempt in range(1, retries + 1):
+        status_map = get_firewall_status()
+        if status_map.get(dpid) == "enable":
+            print(f"    Firewall confirmed ENABLED on switch {dpid}")
+            return
+        print(f"    Waiting for firewall enable on {dpid} ({attempt}/{retries})...")
+        time.sleep(delay)
+
+    raise RuntimeError(f"Firewall did not become enabled on switch {dpid}")
+
+
+def get_firewall_rules(dpid: str) -> List[Dict[str, Any]]:
+    url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
+    response = http_get(url)
+    data = response.json()
+
+    rules = []
+    for entry in data:
+        for acl in entry.get("access_control_list", []):
+            rules.extend(acl.get("rules", []))
+    return rules
+
+
+def wait_for_rule_count(dpid: str, expected_min_rules: int, retries: int = 10, delay: int = 3) -> None:
+    for attempt in range(1, retries + 1):
+        rules = get_firewall_rules(dpid)
+        if len(rules) >= expected_min_rules:
+            print(f"    Firewall rules confirmed on switch {dpid}: {len(rules)} rules")
+            return
+        print(f"    Waiting for firewall rules on {dpid} ({attempt}/{retries})...")
+        time.sleep(delay)
+
+    raise RuntimeError(f"Firewall rules not applied correctly on switch {dpid}")
 
 def apply_ovs_ingress_policing(interface: str, rate_kbps: int, burst_kb: int) -> None:
     cmd_rate = [
@@ -250,16 +290,21 @@ def deploy_firewall() -> None:
     for rule in global_rules + specific_rules:
         validate_firewall_rule(rule)
 
-    # 1) Enable the firewall module and inject only the global ALLOW rules.
+    # Phase 1: enable firewall and confirm status
     for dpid in FIREWALL_DPIDS:
         enable_firewall_on_switch(dpid)
+        wait_for_firewall_enabled(dpid)
 
+    # Phase 2: apply global ALLOW rules and confirm
+    for dpid in FIREWALL_DPIDS:
         for rule in global_rules:
             url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
             http_post(url, rule)
             print(f"    Global firewall rule applied on {dpid}: {rule.get('description', rule)}")
 
-    # 2) Inject DENY rules as actual OpenFlow DROP flows.
+        wait_for_rule_count(dpid, expected_min_rules=len(global_rules))
+
+    # Phase 3: apply DENY rules as OpenFlow DROP flows
     for rule in specific_rules:
         action = str(rule.get("actions", "")).upper()
 
@@ -270,12 +315,10 @@ def deploy_firewall() -> None:
                 http_post(url, payload)
                 print(f"    OpenFlow DENY rule applied on switch {dpid}: {rule.get('description', rule)}")
         else:
-            # Handle future specific ALLOW rules if they are added later.
             for dpid in FIREWALL_DPIDS:
                 url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
                 http_post(url, rule)
                 print(f"    Specific firewall rule applied on {dpid}: {rule.get('description', rule)}")
-
 
 def validate_meter(meter: Dict[str, Any]) -> None:
     if "meter_id" not in meter:
