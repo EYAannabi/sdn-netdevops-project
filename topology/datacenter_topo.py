@@ -12,14 +12,14 @@ class DatacenterTopo(Topo):
         h3 = self.addHost('h3', ip='10.0.0.3/24', mac='00:00:00:00:00:03')
         h4 = self.addHost('h4', ip='10.0.0.4/24', mac='00:00:00:00:00:04')
 
-        # QoS sur h1
+        # Liens Hôtes vers Leafs
         self.addLink(h1, leaf1)
-
         self.addLink(h2, leaf1)
         self.addLink(h3, leaf2)
         self.addLink(h4, leaf2)
 
+        # Liens Leafs vers Spines (ON DÉCOMMENTE ICI)
         self.addLink(leaf1, spine1)
-        #self.addLink(leaf1, spine2)
+        self.addLink(leaf1, spine2) # <- Lien de secours activé
         self.addLink(leaf2, spine1)
-        #self.addLink(leaf2, spine2)
+        self.addLink(leaf2, spine2) # <- Lien de secours activé
