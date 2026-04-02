@@ -15,7 +15,7 @@
   ],
   "specific_rules": [
     {
-      "description": "Block IPv4 traffic from h2 to h4",
+      "description": "Block IPv4 traffic from h1 to h4 only",
       "priority": 65000,
       "dl_type": "IPv4",
       "nw_src": "10.0.0.1",
