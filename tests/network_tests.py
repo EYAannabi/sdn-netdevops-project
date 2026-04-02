@@ -267,15 +267,18 @@ def run_automated_tests() -> int:
 
     try:
         net = build_network()
-        info("*** Waiting for switches to connect...\n")
-        time.sleep(10)
+        
+        # 1. ON ATTEND STP *AVANT* DE DEPLOYER LES REGLES
+        info("*** Waiting 50 seconds for switches to connect and STP convergence...\n")
+        time.sleep(50)
 
+        # 2. ON DEPLOIE MAINTENANT QUE LE RESEAU EST STABLE
         if not deploy_policies():
             return 1
 
-        # Increased from 5s to 45s to allow STP convergence.
-        info("*** Waiting 45 seconds for policies to be applied and STP convergence...\n")
-        time.sleep(60)
+        # Petite pause pour laisser les flux s'installer
+        info("*** Waiting 5 seconds for policies to be programmed in hardware...\n")
+        time.sleep(5)
 
         info("*** Building dynamic test plan from JSON policies...\n")
         firewall_plan = extract_firewall_test_plan()
@@ -305,8 +308,14 @@ def run_automated_tests() -> int:
 
             net.configLinkStatus("s3", "s1", "down")
 
+            # 3. ON ATTEND LA RE-CONVERGENCE STP APRES LA COUPURE
             info("*** Waiting 45 seconds for STP to calculate backup paths...\n")
             time.sleep(45)
+
+            # 4. CRUCIAL : ON REDEPLOIE LES REGLES CAR RYU A PEUT-ETRE TOUT VIDE
+            info("*** Re-activating firewall rules after topology change...\n")
+            deploy_policies()
+            time.sleep(5)
 
             info("*** Re-testing allowed paths to verify dynamic rerouting...\n")
             healing_ok = True
@@ -334,7 +343,6 @@ def run_automated_tests() -> int:
         if net is not None:
             info("*** Stopping ephemeral CI network...\n")
             net.stop()
-
-
+            
 if __name__ == "__main__":
     sys.exit(run_automated_tests())
