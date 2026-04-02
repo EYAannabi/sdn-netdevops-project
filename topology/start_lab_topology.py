@@ -26,7 +26,8 @@ def main():
     topo = DatacenterTopo()
 
     # Keep OpenFlow 1.3 consistent with the Ryu controller
-    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13")
+    # AJOUTE stp=True ICI ABSOLUMENT
+    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13", stp=True)
 
     net = Mininet(
         topo=topo,
