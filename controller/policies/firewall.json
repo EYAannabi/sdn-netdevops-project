@@ -1,17 +1,34 @@
 {
   "global_rules": [
     {
-      "description": "Autoriser tout le trafic IPv4 par défaut",
+      "description": "Allow all IPv4 traffic by default",
       "priority": 1,
       "dl_type": "IPv4",
       "actions": "ALLOW"
     },
     {
-      "description": "Autoriser ARP par défaut",
+      "description": "Allow ARP by default",
       "priority": 1,
       "dl_type": "ARP",
       "actions": "ALLOW"
     }
   ],
-  "specific_rules": []
+  "specific_rules": [
+    {
+      "description": "Block IPv4 traffic from h2 to h4",
+      "priority": 65000,
+      "dl_type": "IPv4",
+      "nw_src": "10.0.0.2",
+      "nw_dst": "10.0.0.4",
+      "actions": "DENY"
+    },
+    {
+      "description": "Block IPv4 traffic from h4 to h2",
+      "priority": 65000,
+      "dl_type": "IPv4",
+      "nw_src": "10.0.0.4",
+      "nw_dst": "10.0.0.2",
+      "actions": "DENY"
+    }
+  ]
 }
