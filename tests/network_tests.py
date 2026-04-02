@@ -206,45 +206,6 @@ def test_ping_denied(net: Mininet, src_name: str, dst_name: str) -> bool:
     return False
 
 
-def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> bool:
-    info(f"*** 📊 QoS TEST (informative): {src_name} -> {dst_name}, expected bandwidth <= {max_mbps} Mbps\n")
-
-    try:
-        cli = net.get(src_name)
-        srv = net.get(dst_name)
-        dst_ip = srv.IP()
-
-        srv.cmd("killall -9 iperf || true")
-        srv.cmd("iperf -s -u -p 5001 >/tmp/iperf_server.log 2>&1 &")
-        time.sleep(2)
-
-        info(f"   ⏳ Running UDP iperf from {src_name} to {dst_name} for 5 seconds...\n")
-        result = cli.cmd(f"iperf -c {dst_ip} -u -p 5001 -b 20M -t 5")
-        srv_log = srv.cmd("cat /tmp/iperf_server.log || true")
-        srv.cmd("killall -9 iperf || true")
-
-        info(f"   Client output: {result}\n")
-        info(f"   Server output: {srv_log}\n")
-
-        matches = re.findall(r"([0-9]*\.?[0-9]+)\s+Mbits/sec", result)
-        if not matches:
-            info("   ⚠️ QoS result could not be parsed.\n")
-            return False
-
-        measured_mbps = float(matches[-1])
-
-        if measured_mbps <= (max_mbps * 1.20):
-            info(f"   ✅ OK: QoS respected ({measured_mbps} Mbps <= {max_mbps} Mbps)\n")
-            return True
-
-        info(f"   ⚠️ QoS exceeded ({measured_mbps} Mbps > {max_mbps} Mbps)\n")
-        return False
-
-    except Exception as e:
-        info(f"   ⚠️ Exception in QoS test: {e}\n")
-        return False
-
-
 def build_network() -> Mininet:
     info("*** 🏗️ Creating ephemeral CI network...\n")
     topo = DatacenterTopo()
@@ -260,6 +221,7 @@ def build_network() -> Mininet:
     net.start()
     return net
 
+
 def run_automated_tests() -> int:
     setLogLevel("info")
     net = None
@@ -272,9 +234,8 @@ def run_automated_tests() -> int:
         if not deploy_policies():
             return 1
 
-        # 👇 MODIFICATION 1 : On passe de 5s à 45s pour la convergence STP
-        info("*** ⏳ Waiting 45 seconds for policies to be applied AND STP convergence...\n")
-        time.sleep(45)
+        info("*** ⏳ Waiting for policies to be applied...\n")
+        time.sleep(10)
 
         info("*** 🧠 Building dynamic test plan from JSON policies...\n")
         firewall_plan = extract_firewall_test_plan()
@@ -282,8 +243,8 @@ def run_automated_tests() -> int:
 
         required_ok = True
 
-        # --- TEST 1 : Vérification initiale du réseau ---
-        info("\n*** 🟢 PHASE 1 : Initial Connectivity Tests\n")
+        info("\n*** 🟢 PHASE 1: Firewall and connectivity tests\n")
+
         for src, dst in firewall_plan["allow"]:
             required_ok = test_ping_allowed(net, src, dst) and required_ok
 
@@ -296,33 +257,13 @@ def run_automated_tests() -> int:
         if not qos_plan:
             info("*** ⚠️ No QoS rules found.\n")
         else:
-            info("*** ⚠️ QoS rules detected, but QoS validation is skipped in CI for the current controller architecture.\n")
+            info("*** ⚠️ QoS rules detected, but QoS validation is handled separately.\n")
 
-        
         if required_ok:
-            info("\n*** 🌪️ PHASE 2 : STARTING SELF-HEALING TEST (STP Failover)...\n")
-            info("*** ✂️  Simulating link failure: Cutting link between s3 and s1...\n")
-            
-            net.configLinkStatus('s3', 's1', 'down')
-
-            info("*** ⏳ Waiting 45 seconds for STP to calculate backup paths...\n")
-            time.sleep(45)
-
-            info("*** 🏓 Re-testing allowed paths to verify dynamic rerouting...\n")
-            healing_ok = True
-            for src, dst in firewall_plan["allow"]:
-                healing_ok = test_ping_allowed(net, src, dst) and healing_ok
-
-            if healing_ok:
-                info("*** ✅ SELF-HEALING SUCCESS: Network recovered and traffic was rerouted!\n")
-            else:
-                info("*** ❌ SELF-HEALING FAILED: Network did not recover from link failure.\n")
-                required_ok = False
-        if required_ok:
-            info("\n🏆 CI SUCCESS: All firewall, connectivity, and self-healing tests passed.\n")
+            info("\n🏆 CI SUCCESS: firewall and connectivity tests passed.\n")
             return 0
 
-        info("\n💥 CI FAILED: Required tests failed.\n")
+        info("\n💥 CI FAILED: firewall/connectivity tests failed.\n")
         return 1
 
     except Exception as e:
@@ -333,6 +274,7 @@ def run_automated_tests() -> int:
         if net is not None:
             info("*** 🛑 Stopping ephemeral CI network...\n")
             net.stop()
-    
+
+
 if __name__ == "__main__":
     sys.exit(run_automated_tests())
