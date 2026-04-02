@@ -248,7 +248,7 @@ def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> boo
 def build_network() -> Mininet:
     info("*** Creating ephemeral CI network...\n")
     topo = DatacenterTopo()
-    switch = partial(OVSKernelSwitch, protocols="OpenFlow13")
+    switch = partial(OVSKernelSwitch, protocols="OpenFlow13", stp=True)
     net = Mininet(
         topo=topo,
         switch=switch,
