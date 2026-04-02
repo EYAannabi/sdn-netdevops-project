@@ -298,14 +298,13 @@ def run_automated_tests() -> int:
         else:
             info("*** ⚠️ QoS rules detected, but QoS validation is skipped in CI for the current controller architecture.\n")
 
-        # 👇 MODIFICATION 2 : Ajout du test automatisé de Self-Healing
+        
         if required_ok:
             info("\n*** 🌪️ PHASE 2 : STARTING SELF-HEALING TEST (STP Failover)...\n")
             info("*** ✂️  Simulating link failure: Cutting link between s3 and s1...\n")
-            # Cette fonction coupe virtuellement le câble dans Mininet
+            
             net.configLinkStatus('s3', 's1', 'down')
 
-            # On doit attendre que le STP détecte la panne et active le chemin de secours
             info("*** ⏳ Waiting 45 seconds for STP to calculate backup paths...\n")
             time.sleep(45)
 
@@ -319,11 +318,6 @@ def run_automated_tests() -> int:
             else:
                 info("*** ❌ SELF-HEALING FAILED: Network did not recover from link failure.\n")
                 required_ok = False
-                
-            # Optionnel : remettre le lien actif avant de clore
-            # net.configLinkStatus('s3', 's1', 'up')
-
-        # --- Bilan Final ---
         if required_ok:
             info("\n🏆 CI SUCCESS: All firewall, connectivity, and self-healing tests passed.\n")
             return 0
