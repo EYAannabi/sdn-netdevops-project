@@ -260,7 +260,6 @@ def build_network() -> Mininet:
     net.start()
     return net
 
-
 def run_automated_tests() -> int:
     setLogLevel("info")
     net = None
@@ -273,8 +272,9 @@ def run_automated_tests() -> int:
         if not deploy_policies():
             return 1
 
-        info("*** ⏳ Waiting for policies to be applied...\n")
-        time.sleep(5)
+        # 👇 MODIFICATION 1 : On passe de 5s à 45s pour la convergence STP
+        info("*** ⏳ Waiting 45 seconds for policies to be applied AND STP convergence...\n")
+        time.sleep(45)
 
         info("*** 🧠 Building dynamic test plan from JSON policies...\n")
         firewall_plan = extract_firewall_test_plan()
@@ -282,6 +282,8 @@ def run_automated_tests() -> int:
 
         required_ok = True
 
+        # --- TEST 1 : Vérification initiale du réseau ---
+        info("\n*** 🟢 PHASE 1 : Initial Connectivity Tests\n")
         for src, dst in firewall_plan["allow"]:
             required_ok = test_ping_allowed(net, src, dst) and required_ok
 
@@ -296,11 +298,37 @@ def run_automated_tests() -> int:
         else:
             info("*** ⚠️ QoS rules detected, but QoS validation is skipped in CI for the current controller architecture.\n")
 
+        # 👇 MODIFICATION 2 : Ajout du test automatisé de Self-Healing
         if required_ok:
-            info("\n🏆 CI SUCCESS: required firewall/connectivity tests passed.\n")
+            info("\n*** 🌪️ PHASE 2 : STARTING SELF-HEALING TEST (STP Failover)...\n")
+            info("*** ✂️  Simulating link failure: Cutting link between s3 and s1...\n")
+            # Cette fonction coupe virtuellement le câble dans Mininet
+            net.configLinkStatus('s3', 's1', 'down')
+
+            # On doit attendre que le STP détecte la panne et active le chemin de secours
+            info("*** ⏳ Waiting 45 seconds for STP to calculate backup paths...\n")
+            time.sleep(45)
+
+            info("*** 🏓 Re-testing allowed paths to verify dynamic rerouting...\n")
+            healing_ok = True
+            for src, dst in firewall_plan["allow"]:
+                healing_ok = test_ping_allowed(net, src, dst) and healing_ok
+
+            if healing_ok:
+                info("*** ✅ SELF-HEALING SUCCESS: Network recovered and traffic was rerouted!\n")
+            else:
+                info("*** ❌ SELF-HEALING FAILED: Network did not recover from link failure.\n")
+                required_ok = False
+                
+            # Optionnel : remettre le lien actif avant de clore
+            # net.configLinkStatus('s3', 's1', 'up')
+
+        # --- Bilan Final ---
+        if required_ok:
+            info("\n🏆 CI SUCCESS: All firewall, connectivity, and self-healing tests passed.\n")
             return 0
 
-        info("\n💥 CI FAILED: required firewall/connectivity tests failed.\n")
+        info("\n💥 CI FAILED: Required tests failed.\n")
         return 1
 
     except Exception as e:
@@ -311,6 +339,6 @@ def run_automated_tests() -> int:
         if net is not None:
             info("*** 🛑 Stopping ephemeral CI network...\n")
             net.stop()
-            
+    
 if __name__ == "__main__":
     sys.exit(run_automated_tests())
