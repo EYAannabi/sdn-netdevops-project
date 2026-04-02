@@ -11,7 +11,7 @@ try:
     apps = config["controller"]["apps"]
 
     print(f"Launching Ryu controller with: {apps}", flush=True)
-
+    os.environ["PYTHONPATH"] = "/app:" + os.environ.get("PYTHONPATH", "")
     os.execvp("ryu-manager", ["ryu-manager", "--verbose"] + apps)
 
 except Exception as e:
