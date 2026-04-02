@@ -24,7 +24,9 @@ def main():
     info("*** Starting persistent datacenter topology...\n")
 
     topo = DatacenterTopo()
-    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13", stp=True)
+
+    # Keep OpenFlow 1.3 consistent with the Ryu controller
+    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13")
 
     net = Mininet(
         topo=topo,
@@ -34,24 +36,23 @@ def main():
         autoSetMacs=True
     )
 
-    c0 = net.addController(
+    net.addController(
         "c0",
         controller=RemoteController,
         ip=CONTROLLER_IP,
         port=CONTROLLER_PORT
     )
 
-    c0.start()
-    time.sleep(2)
     net.start()
-    time.sleep(60)
+
+    # Allow switches to connect and the controller to install initial flows
+    time.sleep(10)
+
     info("*** Persistent lab topology is running.\n")
     info("*** Controller connected at %s:%s\n" % (CONTROLLER_IP, CONTROLLER_PORT))
 
-    # Open the interactive terminal and block until the user exits.
     CLI(net)
 
-    # Stop the network cleanly after leaving the CLI.
     info("*** Stopping persistent lab topology...\n")
     net.stop()
 
