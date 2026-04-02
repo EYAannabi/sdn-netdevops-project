@@ -267,15 +267,19 @@ def run_automated_tests() -> int:
 
     try:
         net = build_network()
-        info("*** Waiting for switches to connect...\n")
-        time.sleep(10)
+        
+        # 1. TRÈS IMPORTANT : Attendre la convergence STP AVANT d'injecter la moindre règle
+        info("*** Waiting 50 seconds for STP convergence and physical loop blocking...\n")
+        time.sleep(50)
 
+        # 2. Maintenant que la boucle L2 est coupée, on déploie les règles du pare-feu
+        info("*** Deploying firewall policies...\n")
         if not deploy_policies():
             return 1
 
-        # Increased from 5s to 45s to allow STP convergence.
-        info("*** Waiting 45 seconds for policies to be applied and STP convergence...\n")
-        time.sleep(60)
+        # 3. Petite pause pour laisser le temps au contrôleur d'envoyer les flux OpenFlow aux switchs
+        info("*** Waiting 5 seconds for policies to be applied...\n")
+        time.sleep(5)
 
         info("*** Building dynamic test plan from JSON policies...\n")
         firewall_plan = extract_firewall_test_plan()
@@ -305,6 +309,7 @@ def run_automated_tests() -> int:
 
             net.configLinkStatus("s3", "s1", "down")
 
+            # 4. Attente de la re-convergence STP après la coupure du lien
             info("*** Waiting 45 seconds for STP to calculate backup paths...\n")
             time.sleep(45)
 
