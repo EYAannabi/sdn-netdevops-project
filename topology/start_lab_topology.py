@@ -24,7 +24,7 @@ def main():
     info("*** Starting persistent datacenter topology...\n")
 
     topo = DatacenterTopo()
-    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13")
+    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13", stp=True)
 
     net = Mininet(
         topo=topo,
