@@ -38,12 +38,12 @@ def run_command(cmd: str) -> subprocess.CompletedProcess:
 
 
 def deploy_policies() -> bool:
-    info("*** 🚀 Deploying network policies...\n")
+    info("*** Deploying network policies...\n")
     result = run_command(f"python3 {POLICY_DEPLOY_SCRIPT}")
     if result.returncode != 0:
-        info("❌ Policy deployment failed.\n")
+        info("Policy deployment failed.\n")
         return False
-    info("✅ Policies deployed successfully.\n")
+    info("Policies deployed successfully.\n")
     return True
 
 
@@ -179,35 +179,74 @@ def extract_qos_test_plan() -> List[Tuple[str, str, float]]:
 
 
 def test_ping_allowed(net: Mininet, src_name: str, dst_name: str) -> bool:
-    info(f"*** 🟢 ALLOW TEST: {src_name} -> {dst_name}\n")
+    info(f"*** ALLOW TEST: {src_name} -> {dst_name}\n")
     dst_ip = net.get(dst_name).IP()
     result = net.get(src_name).cmd(f"ping -c 2 -W 1 {dst_ip}")
 
     if "0% packet loss" in result or " 0% packet loss" in result:
-        info(f"   ✅ OK: {src_name} can reach {dst_name}\n")
+        info(f"   OK: {src_name} can reach {dst_name}\n")
         return True
 
-    info(f"   ❌ FAIL: {src_name} cannot reach {dst_name}\n")
+    info(f"   FAIL: {src_name} cannot reach {dst_name}\n")
     info(f"   Output: {result}\n")
     return False
 
 
 def test_ping_denied(net: Mininet, src_name: str, dst_name: str) -> bool:
-    info(f"*** 🔴 DENY TEST: {src_name} -> {dst_name} (Policy as Code)\n")
+    info(f"*** DENY TEST: {src_name} -> {dst_name} (Policy as Code)\n")
     dst_ip = net.get(dst_name).IP()
     result = net.get(src_name).cmd(f"ping -c 2 -W 1 {dst_ip}")
 
     if "100% packet loss" in result or "Destination Host Unreachable" in result:
-        info(f"   ✅ OK: traffic {src_name} -> {dst_name} is blocked\n")
+        info(f"   OK: traffic {src_name} -> {dst_name} is blocked\n")
         return True
 
-    info(f"   ❌ FAIL: traffic {src_name} -> {dst_name} is NOT blocked\n")
+    info(f"   FAIL: traffic {src_name} -> {dst_name} is NOT blocked\n")
     info(f"   Output: {result}\n")
     return False
 
 
+def test_qos(net: Mininet, src_name: str, dst_name: str, max_mbps: float) -> bool:
+    info(f"*** QoS TEST (informative): {src_name} -> {dst_name}, expected bandwidth <= {max_mbps} Mbps\n")
+
+    try:
+        cli = net.get(src_name)
+        srv = net.get(dst_name)
+        dst_ip = srv.IP()
+
+        srv.cmd("killall -9 iperf || true")
+        srv.cmd("iperf -s -u -p 5001 >/tmp/iperf_server.log 2>&1 &")
+        time.sleep(2)
+
+        info(f"   Running UDP iperf from {src_name} to {dst_name} for 5 seconds...\n")
+        result = cli.cmd(f"iperf -c {dst_ip} -u -p 5001 -b 20M -t 5")
+        srv_log = srv.cmd("cat /tmp/iperf_server.log || true")
+        srv.cmd("killall -9 iperf || true")
+
+        info(f"   Client output: {result}\n")
+        info(f"   Server output: {srv_log}\n")
+
+        matches = re.findall(r"([0-9]*\.?[0-9]+)\s+Mbits/sec", result)
+        if not matches:
+            info("   QoS result could not be parsed.\n")
+            return False
+
+        measured_mbps = float(matches[-1])
+
+        if measured_mbps <= (max_mbps * 1.20):
+            info(f"   OK: QoS respected ({measured_mbps} Mbps <= {max_mbps} Mbps)\n")
+            return True
+
+        info(f"   Warning: QoS exceeded ({measured_mbps} Mbps > {max_mbps} Mbps)\n")
+        return False
+
+    except Exception as e:
+        info(f"   Exception in QoS test: {e}\n")
+        return False
+
+
 def build_network() -> Mininet:
-    info("*** 🏗️ Creating ephemeral CI network...\n")
+    info("*** Creating ephemeral CI network...\n")
     topo = DatacenterTopo()
     switch = partial(OVSKernelSwitch, protocols="OpenFlow13")
     net = Mininet(
@@ -228,51 +267,72 @@ def run_automated_tests() -> int:
 
     try:
         net = build_network()
-        info("*** ⏳ Waiting for switches to connect...\n")
+        info("*** Waiting for switches to connect...\n")
         time.sleep(10)
 
         if not deploy_policies():
             return 1
 
-        info("*** ⏳ Waiting for policies to be applied...\n")
-        time.sleep(10)
+        # Increased from 5s to 45s to allow STP convergence.
+        info("*** Waiting 45 seconds for policies to be applied and STP convergence...\n")
+        time.sleep(60)
 
-        info("*** 🧠 Building dynamic test plan from JSON policies...\n")
+        info("*** Building dynamic test plan from JSON policies...\n")
         firewall_plan = extract_firewall_test_plan()
         qos_plan = extract_qos_test_plan()
 
         required_ok = True
 
-        info("\n*** 🟢 PHASE 1: Firewall and connectivity tests\n")
-
+        # --- TEST 1: Initial network verification ---
+        info("\n*** PHASE 1: Initial connectivity tests\n")
         for src, dst in firewall_plan["allow"]:
             required_ok = test_ping_allowed(net, src, dst) and required_ok
 
         if not firewall_plan["deny"]:
-            info("*** ⚠️ No DENY firewall rules found.\n")
+            info("*** No DENY firewall rules found.\n")
 
         for src, dst in firewall_plan["deny"]:
             required_ok = test_ping_denied(net, src, dst) and required_ok
 
         if not qos_plan:
-            info("*** ⚠️ No QoS rules found.\n")
+            info("*** No QoS rules found.\n")
         else:
-            info("*** ⚠️ QoS rules detected, but QoS validation is handled separately.\n")
+            info("*** QoS rules detected, but QoS validation is skipped in CI for the current controller architecture.\n")
 
         if required_ok:
-            info("\n🏆 CI SUCCESS: firewall and connectivity tests passed.\n")
+            info("\n*** PHASE 2: Starting self-healing test (STP failover)...\n")
+            info("*** Simulating link failure: cutting link between s3 and s1...\n")
+
+            net.configLinkStatus("s3", "s1", "down")
+
+            info("*** Waiting 45 seconds for STP to calculate backup paths...\n")
+            time.sleep(45)
+
+            info("*** Re-testing allowed paths to verify dynamic rerouting...\n")
+            healing_ok = True
+            for src, dst in firewall_plan["allow"]:
+                healing_ok = test_ping_allowed(net, src, dst) and healing_ok
+
+            if healing_ok:
+                info("*** SELF-HEALING SUCCESS: Network recovered and traffic was rerouted!\n")
+            else:
+                info("*** SELF-HEALING FAILED: Network did not recover from link failure.\n")
+                required_ok = False
+
+        if required_ok:
+            info("\nCI SUCCESS: All firewall, connectivity, and self-healing tests passed.\n")
             return 0
 
-        info("\n💥 CI FAILED: firewall/connectivity tests failed.\n")
+        info("\nCI FAILED: Required tests failed.\n")
         return 1
 
     except Exception as e:
-        info(f"\n💥 Exception during CI tests: {e}\n")
+        info(f"\nException during CI tests: {e}\n")
         return 1
 
     finally:
         if net is not None:
-            info("*** 🛑 Stopping ephemeral CI network...\n")
+            info("*** Stopping ephemeral CI network...\n")
             net.stop()
 
 

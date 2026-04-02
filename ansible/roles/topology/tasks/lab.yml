@@ -1,44 +1,44 @@
 ---
-- name: S'assurer que tmux est installé
+- name: Ensure tmux is installed
   apt:
     name: tmux
     state: present
   become: yes
 
-- name: Vérifier si la topologie Mininet tourne déjà (via OVS)
+- name: Check whether the Mininet topology is already running (via OVS)
   shell: ovs-vsctl list-br
   become: yes
   register: existing_ovs
   changed_when: false
   failed_when: false
 
-- name: Afficher le statut actuel des bridges
+- name: Show current bridge status
   debug:
-    msg: "Bridges actuels : {{ existing_ovs.stdout_lines | default(['Aucun bridge détecté']) }}"
+    msg: "Current bridges: {{ existing_ovs.stdout_lines | default(['No bridge detected']) }}"
 
-- name: 🧹 Détruire l'ancienne session tmux si elle existe
+- name: Remove the old tmux session if it exists
   shell: tmux kill-session -t mininet_lab
-  become: yes          # <--- LA LIGNE MAGIQUE À AJOUTER ICI
+  become: yes
   ignore_errors: true
 
-- name: Démarrer la topologie LAB dans une session tmux (si absente)
+- name: Start the LAB topology in a tmux session (if missing)
   shell: >
     tmux new-session -d -s mininet_lab 'sudo env PYTHONDONTWRITEBYTECODE=1 python3 {{ playbook_dir }}/../topology/start_lab_topology.py'
   become: yes
   when: existing_ovs.stdout == ""
 
-- name: Attendre quelques secondes que la topologie démarre (si nouvellement lancée)
+- name: Wait a few seconds for the topology to start (if newly launched)
   pause:
     seconds: 15
   when: existing_ovs.stdout == ""
 
-- name: Vérifier que des bridges OVS existent maintenant
+- name: Verify that OVS bridges now exist
   shell: ovs-vsctl list-br
   become: yes
   register: final_ovs_bridges
   failed_when: final_ovs_bridges.stdout_lines | length == 0
   changed_when: false
 
-- name: Afficher les bridges OVS finaux
+- name: Show final OVS bridges
   debug:
     msg: "{{ final_ovs_bridges.stdout_lines }}"

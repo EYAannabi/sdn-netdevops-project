@@ -1,51 +1,54 @@
-# Fichier: scripts/start_demo.py
+# File: scripts/start_demo.py
 import time
 import sys
 import subprocess
+from functools import partial
+
 from mininet.net import Mininet
 from mininet.node import RemoteController, OVSKernelSwitch
 from mininet.link import TCLink
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
-from functools import partial
 
-# On importe ta topologie
-sys.path.append('.')
+# Import the topology
+sys.path.append(".")
 from topology.datacenter_topo import DatacenterTopo
 
+
 def start_interactive_demo():
-    setLogLevel('info')
-    info("*** 🏗️ Démarrage de l'environnement de Démo NetDevOps...\n")
-    
+    setLogLevel("info")
+    info("*** Starting the NetDevOps demo environment...\n")
+
     topo = DatacenterTopo()
-    switch_of13 = partial(OVSKernelSwitch, protocols='OpenFlow13')
-    
+    switch_of13 = partial(OVSKernelSwitch, protocols="OpenFlow13")
+
     net = Mininet(topo=topo, switch=switch_of13, link=TCLink, controller=None)
-    c0 = net.addController('c0', controller=RemoteController, ip='127.0.0.1', port=6653)
-    
+    c0 = net.addController("c0", controller=RemoteController, ip="127.0.0.1", port=6653)
+
     c0.start()
     time.sleep(3)
     net.start()
-    
-    info("*** ⏳ Attente de 5s pour l'apprentissage du réseau...\n")
+
+    info("*** Waiting 5 seconds for network learning...\n")
     time.sleep(5)
 
-    info("*** 🚀 Déploiement des politiques (Firewall & QoS) via Policy-as-Code...\n")
+    info("*** Deploying policies (Firewall & QoS) via Policy as Code...\n")
     subprocess.run(["python3", "scripts/deploy_policies.py"])
-    
-    info("\n" + "="*60 + "\n")
-    info("🟢 RÉSEAU ACTIF ET MONITORING EN COURS !\n")
-    info("👉 Allez sur Grafana (http://localhost:3000) pour voir les courbes.\n")
-    info("👉 Générez du trafic ici en tapant :  h1 ping h2  ou  iperf h1 h2\n")
-    info("👉 Tapez 'exit' pour fermer proprement le réseau.\n")
-    info("="*60 + "\n")
-    
-    # 🌟 C'est ici la magie : on lance le CLI interactif ! Le script se met en pause ici.
+
+    info("\n" + "=" * 60 + "\n")
+    info("NETWORK IS UP AND MONITORING IS ACTIVE!\n")
+    info("Open Grafana at http://localhost:3000 to view the dashboards.\n")
+    info("Generate traffic here with: h1 ping h2 or iperf h1 h2\n")
+    info("Type 'exit' to shut the network down cleanly.\n")
+    info("=" * 60 + "\n")
+
+    # Start the interactive CLI. The script pauses here until the user exits.
     CLI(net)
-    
-    # Quand tu taperas "exit" dans le CLI, le code reprendra ici pour tout nettoyer.
-    info("\n*** 🛑 Arrêt du réseau de démo...\n")
+
+    # Cleanup resumes here after "exit" is entered in the CLI.
+    info("\n*** Stopping the demo network...\n")
     net.stop()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     start_interactive_demo()

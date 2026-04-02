@@ -1,4 +1,4 @@
-- name: 🧹 Nettoyer l'environnement Mininet précédent avant tout
+- name: Clean up the previous Mininet environment first
   shell: mn -c
   become: yes
   ignore_errors: yes
@@ -11,7 +11,7 @@
 - name: Ensure Docker network exists
   shell: docker network create sdn_net || true
 
-- name: Remove existing controller container if exists
+- name: Remove existing controller container if it exists
   shell: docker rm -f sdn-controller || true
 
 - name: Run SDN controller

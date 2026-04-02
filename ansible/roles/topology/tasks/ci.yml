@@ -1,10 +1,10 @@
-- name: 🧪 Lancer la topologie de test et exécuter les tests réseau automatisés
+- name: Start the test topology and run automated network tests
   shell: python3 {{ playbook_dir }}/../tests/network_tests.py
   become: yes
   environment:
     PYTHONDONTWRITEBYTECODE: "1"
   register: test_results
 
-- name: 📊 Afficher les résultats des tests CI
+- name: Show CI test results
   debug:
     msg: "{{ test_results.stdout_lines }}"

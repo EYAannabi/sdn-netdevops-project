@@ -1,6 +1,6 @@
 - name: Wait for topology and switches to be ready
   pause:
-    seconds: 15
+    seconds: 60
 
 - name: Apply SDN policies from source of truth
   shell: python3 {{ playbook_dir }}/../scripts/deploy_policies.py

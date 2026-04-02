@@ -7,8 +7,7 @@ from mininet.net import Mininet
 from mininet.node import RemoteController, OVSKernelSwitch
 from mininet.link import TCLink
 from mininet.log import setLogLevel, info
-# 👇 AJOUTE CETTE LIGNE CRUCIALE ICI :
-from mininet.cli import CLI 
+from mininet.cli import CLI
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
@@ -45,14 +44,14 @@ def main():
     c0.start()
     time.sleep(2)
     net.start()
-
+    time.sleep(60)
     info("*** Persistent lab topology is running.\n")
     info("*** Controller connected at %s:%s\n" % (CONTROLLER_IP, CONTROLLER_PORT))
-    
-    # 👇 Ouvre le terminal interactif (bloque l'exécution ici jusqu'à ce que tu quittes)
-    CLI(net) 
-    
-    # 👇 Une fois qu'on quitte le CLI, on arrête le réseau proprement
+
+    # Open the interactive terminal and block until the user exits.
+    CLI(net)
+
+    # Stop the network cleanly after leaving the CLI.
     info("*** Stopping persistent lab topology...\n")
     net.stop()
 
