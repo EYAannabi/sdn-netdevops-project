@@ -14,23 +14,98 @@ QOS_POLICY_PATH = os.path.join(BASE_DIR, "../controller/policies/qos.json")
 RYU_BASE_URL = os.getenv("RYU_BASE_URL", "http://127.0.0.1:8080")
 REQUEST_TIMEOUT = 10
 
-# REST firewall DPIDs
-FIREWALL_DPIDS = [
-    "0000000000000001",
-    "0000000000000002",
-    "0000000000000003",
-    "0000000000000004",
-]
-
-# OpenFlow DPIDs
-OF_DPIDS = [1, 2, 3, 4]
-
+OVSDB_PORT = 6632
 HOST_EDGE_SWITCH = {
     "10.0.0.1": 3,  # h1 on s3
     "10.0.0.2": 3,  # h2 on s3
     "10.0.0.3": 4,  # h3 on s4
     "10.0.0.4": 4,  # h4 on s4
 }
+
+# For the OpenFlow /stats/* APIs
+OF_DPIDS = [1, 2, 3, 4]
+
+
+def apply_ovs_ingress_policing(interface: str, rate_kbps: int, burst_kb: int) -> None:
+    cmd_rate = [
+        "sudo", "ovs-vsctl", "set", "interface", interface,
+        f"ingress_policing_rate={rate_kbps}"
+    ]
+    cmd_burst = [
+        "sudo", "ovs-vsctl", "set", "interface", interface,
+        f"ingress_policing_burst={burst_kb}"
+    ]
+
+    subprocess.run(cmd_rate, check=True)
+    subprocess.run(cmd_burst, check=True)
+
+    print(f"    QoS policing applied on {interface}: rate={rate_kbps} kbps, burst={burst_kb} kb")
+
+
+def get_qos_dpids_for_rule(rule: Dict[str, Any]) -> List[int]:
+    match = rule.get("match", {})
+    src_ip = match.get("ipv4_src") or match.get("nw_src")
+    if not src_ip:
+        return []
+    src_ip = src_ip.split("/")[0]
+    dpid = HOST_EDGE_SWITCH.get(src_ip)
+    return [dpid] if dpid is not None else []
+
+
+def configure_ovsdb_for_switch(dpid: int) -> None:
+    url = f"{RYU_BASE_URL}/v1.0/conf/switches/{dpid:016x}/ovsdb_addr"
+    payload = f"tcp:127.0.0.1:{OVSDB_PORT}"
+    response = requests.put(url, json=payload, timeout=REQUEST_TIMEOUT)
+    response.raise_for_status()
+    print(f"    OVSDB configured for switch {dpid}")
+
+
+def build_queue_payload_from_meter(meter: Dict[str, Any], port_name: str) -> Dict[str, Any]:
+    bands = meter.get("bands", [])
+    if not bands:
+        raise ValueError(f"Meter without bands: {meter}")
+
+    rate_kbps = bands[0]["rate"]
+    max_rate_bps = str(int(rate_kbps) * 1000)
+
+    return {
+        "port_name": port_name,
+        "type": "linux-htb",
+        "max_rate": max_rate_bps,
+        "queues": [
+            {
+                "max_rate": max_rate_bps
+            }
+        ]
+    }
+
+
+def build_qos_rule_payload(rule: Dict[str, Any]) -> Dict[str, Any]:
+    match = rule.get("match", {})
+    src_ip = match.get("ipv4_src") or match.get("nw_src")
+
+    return {
+        "match": {
+            "nw_src": src_ip,
+            "dl_type": "IPv4"
+        },
+        "actions": {
+            "queue": "0"
+        }
+    }
+
+
+def get_port_name_for_qos_source(src_ip: str) -> str:
+    src_ip = src_ip.split("/")[0]
+    if src_ip == "10.0.0.3":
+        return "s4-eth1"
+    if src_ip == "10.0.0.4":
+        return "s4-eth2"
+    if src_ip == "10.0.0.1":
+        return "s3-eth1"
+    if src_ip == "10.0.0.2":
+        return "s3-eth2"
+    raise ValueError(f"Unknown QoS source IP: {src_ip}")
 
 
 def load_json_file(path: str) -> Dict[str, Any]:
@@ -79,65 +154,6 @@ def wait_for_ryu_and_switches(max_retries: int = 15, delay: int = 3) -> None:
         time.sleep(delay)
 
     raise RuntimeError("Ryu API unavailable, or available with no connected switches.")
-
-
-def get_firewall_status() -> Dict[str, str]:
-    url = f"{RYU_BASE_URL}/firewall/module/status"
-    response = http_get(url)
-    data = response.json()
-    return {item["switch_id"]: item["status"] for item in data}
-
-
-def wait_for_firewall_enabled(dpid: str, retries: int = 10, delay: int = 3) -> bool:
-    for attempt in range(1, retries + 1):
-        try:
-            status_map = get_firewall_status()
-            if status_map.get(dpid) == "enable":
-                print(f"    Firewall confirmed ENABLED on switch {dpid}")
-                return True
-        except Exception as e:
-            print(f"    Warning while checking firewall status on {dpid}: {e}")
-
-        print(f"    Waiting for firewall enable on {dpid} ({attempt}/{retries})...")
-        time.sleep(delay)
-
-    print(f"    Warning: firewall did not become ENABLE on switch {dpid}, continuing anyway.")
-    return False
-
-
-def get_firewall_rules(dpid: str) -> List[Dict[str, Any]]:
-    url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
-    response = http_get(url)
-    data = response.json()
-
-    rules = []
-    for entry in data:
-        for acl in entry.get("access_control_list", []):
-            rules.extend(acl.get("rules", []))
-    return rules
-
-
-def wait_for_rule_count(dpid: str, expected_min_rules: int, retries: int = 10, delay: int = 3) -> bool:
-    for attempt in range(1, retries + 1):
-        try:
-            rules = get_firewall_rules(dpid)
-            if len(rules) >= expected_min_rules:
-                print(f"    Firewall rules confirmed on switch {dpid}: {len(rules)} rules")
-                return True
-        except Exception as e:
-            print(f"    Warning while checking firewall rules on {dpid}: {e}")
-
-        print(f"    Waiting for firewall rules on {dpid} ({attempt}/{retries})...")
-        time.sleep(delay)
-
-    print(f"    Warning: firewall rules not fully visible on switch {dpid}, continuing anyway.")
-    return False
-
-
-def enable_firewall_on_switch(dpid: str) -> None:
-    url = f"{RYU_BASE_URL}/firewall/module/enable/{dpid}"
-    http_put(url)
-    print(f"    Firewall enable request sent for switch {dpid}")
 
 
 def normalize_firewall_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
@@ -221,66 +237,35 @@ def deploy_firewall() -> None:
     for rule in global_rules + specific_rules:
         validate_firewall_rule(rule)
 
-    # Phase 1: enable firewall on all switches
-    for dpid in FIREWALL_DPIDS:
-        try:
-            enable_firewall_on_switch(dpid)
-        except Exception as e:
-            print(f"    Warning: firewall enable request failed on switch {dpid}: {e}")
-            continue
+    if global_rules:
+        print("    Global ALLOW rules are treated as implicit traffic policy in the custom datacenter controller.")
 
-        wait_for_firewall_enabled(dpid)
-
-    # Phase 2: apply global ALLOW rules on all switches
-    for dpid in FIREWALL_DPIDS:
-        for rule in global_rules:
-            try:
-                url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
-                http_post(url, rule)
-                print(f"    Global firewall rule applied on {dpid}: {rule.get('description', rule)}")
-            except Exception as e:
-                print(f"    Warning: failed to apply global firewall rule on {dpid}: {e}")
-
-        if global_rules:
-            wait_for_rule_count(dpid, expected_min_rules=len(global_rules))
-
-    # Phase 3: apply DENY rules as OpenFlow DROP flows
+    # Inject DENY rules as explicit OpenFlow DROP flows.
     for rule in specific_rules:
         action = str(rule.get("actions", "")).upper()
 
         if action == "DENY":
             for dpid in OF_DPIDS:
-                try:
-                    payload = build_drop_flow_from_firewall_rule(dpid, rule)
-                    url = f"{RYU_BASE_URL}/stats/flowentry/add"
-                    http_post(url, payload)
-                    print(f"    OpenFlow DENY rule applied on switch {dpid}: {rule.get('description', rule)}")
-                except Exception as e:
-                    print(f"    Warning: failed to apply OpenFlow DENY rule on switch {dpid}: {e}")
+                payload = build_drop_flow_from_firewall_rule(dpid, rule)
+                url = f"{RYU_BASE_URL}/stats/flowentry/add"
+                http_post(url, payload)
+                print(f"    OpenFlow DENY rule applied on switch {dpid}: {rule.get('description', rule)}")
         else:
-            for dpid in FIREWALL_DPIDS:
-                try:
-                    url = f"{RYU_BASE_URL}/firewall/rules/{dpid}"
-                    http_post(url, rule)
-                    print(f"    Specific firewall rule applied on {dpid}: {rule.get('description', rule)}")
-                except Exception as e:
-                    print(f"    Warning: failed to apply specific firewall rule on {dpid}: {e}")
+            print(f"    Specific ALLOW rule kept as implicit forwarding behavior: {rule.get('description', rule)}")
 
 
-def apply_ovs_ingress_policing(interface: str, rate_kbps: int, burst_kb: int) -> None:
-    cmd_rate = [
-        "sudo", "ovs-vsctl", "set", "interface", interface,
-        f"ingress_policing_rate={rate_kbps}"
-    ]
-    cmd_burst = [
-        "sudo", "ovs-vsctl", "set", "interface", interface,
-        f"ingress_policing_burst={burst_kb}"
-    ]
+def validate_meter(meter: Dict[str, Any]) -> None:
+    if "meter_id" not in meter:
+        raise ValueError(f"Invalid meter: missing meter_id -> {meter}")
+    if "bands" not in meter or not meter["bands"]:
+        raise ValueError(f"Invalid meter: missing or empty bands -> {meter}")
 
-    subprocess.run(cmd_rate, check=True)
-    subprocess.run(cmd_burst, check=True)
 
-    print(f"    QoS policing applied on {interface}: rate={rate_kbps} kbps, burst={burst_kb} kb")
+def validate_qos_rule(rule: Dict[str, Any]) -> None:
+    if "match" not in rule:
+        raise ValueError(f"Invalid QoS rule: missing match -> {rule}")
+    if "instructions" not in rule or not rule["instructions"]:
+        raise ValueError(f"Invalid QoS rule: missing instructions -> {rule}")
 
 
 def deploy_qos() -> None:

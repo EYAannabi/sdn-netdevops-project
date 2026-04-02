@@ -1,7 +1,6 @@
 controller:
   apps:
-    - ryu.app.simple_switch_stp_13
+    - controller.apps.datacenter_controller
     - ryu.app.ofctl_rest
-    - ryu.app.rest_firewall
   of_port: 6653
   rest_port: 8080
