@@ -3,7 +3,7 @@
     {
       "description": "Limit incoming traffic on h4 switch port to 10 Mbps",
       "interface": "s4-eth2",
-      "rate_kbps": 10000,
+      "rate_kbps": 15000,
       "burst_kb": 1000
     }
   ]
