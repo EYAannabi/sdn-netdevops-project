@@ -18,7 +18,7 @@
       "description": "Block IPv4 traffic from h1 to h4 only",
       "priority": 65000,
       "dl_type": "IPv4",
-      "nw_src": "10.0.0.3",
+      "nw_src": "10.0.0.1",
       "nw_dst": "10.0.0.4",
       "actions": "DENY"
     }
