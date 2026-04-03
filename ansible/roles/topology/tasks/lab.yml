@@ -48,9 +48,13 @@
   become: yes
   when: mininet_pid.stdout == "" or mininet_tmux.rc != 0
 
-- name: Start the LAB topology in a tmux session
-  shell: >
-    tmux new-session -d -s mininet_lab 'sudo env PYTHONDONTWRITEBYTECODE=1 python3 {{ playbook_dir }}/../topology/start_lab_topology.py'
+- name: Start the LAB topology in a detached tmux session (CD/local mode)
+  shell: |
+    if tmux has-session -t mininet_lab 2>/dev/null; then
+      echo "Session mininet_lab already exists"
+    else
+      tmux new-session -d -s mininet_lab 'sudo env PYTHONDONTWRITEBYTECODE=1 python3 {{ playbook_dir }}/../topology/start_lab_topology.py'
+    fi
   become: yes
   when: mininet_pid.stdout == "" or mininet_tmux.rc != 0
 
@@ -63,8 +67,24 @@
   shell: ovs-vsctl list-br
   become: yes
   register: final_ovs_bridges
-  failed_when: final_ovs_bridges.stdout_lines | length == 0
+  retries: 10
+  delay: 3
+  until: final_ovs_bridges.stdout_lines | length > 0
   changed_when: false
+
+- name: Show final OVS bridges
+  debug:
+    msg: "{{ final_ovs_bridges.stdout_lines }}"
+
+- name: Show how to attach to Mininet CLI
+  debug:
+    msg: |
+      Mininet is running in tmux session 'mininet_lab'.
+      To interact with the Mininet CLI, run:
+      sudo tmux attach-session -t mininet_lab
+      (or from any shell: sudo tmux ls && sudo tmux attach -t mininet_lab)
+      To detach from CLI, press Ctrl-b d
+
 
 - name: Show final OVS bridges
   debug:
