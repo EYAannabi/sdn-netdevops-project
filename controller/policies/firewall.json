@@ -19,14 +19,14 @@
       "priority": 65000,
       "dl_type": "IPv4",
       "nw_src": "10.0.0.1",
-      "nw_dst": "10.0.0.2",
+      "nw_dst": "10.0.0.4",
       "actions": "DENY"
     },
     {
       "description": "Block IPv4 traffic from h2 to h1",
       "priority": 65000,
       "dl_type": "IPv4",
-      "nw_src": "10.0.0.2",
+      "nw_src": "10.0.0.4",
       "nw_dst": "10.0.0.1",
       "actions": "DENY"
     }
