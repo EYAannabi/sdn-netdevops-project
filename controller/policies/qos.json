@@ -1,10 +1,10 @@
 {
   "policing_rules": [
     {
-      "description": "Limit incoming traffic on h4 switch port to 10 Mbps",
-      "interface": "s4-eth2",
-      "rate_kbps": 10000,
-      "burst_kb": 1000
+      "description": "Limit incoming traffic on h1 switch port to 5 Mbps",
+      "interface": "s1-eth1",
+      "rate_kbps": 5000,
+      "burst_kb": 500
     }
   ]
 }
