@@ -13,15 +13,5 @@
       "actions": "ALLOW"
     }
   ],
-  "specific_rules": [
-    {
-      "description": "Interdire h2 d'accéder à h3",
-      "priority": 65000,
-      "dl_type": "IPv4",
-      "nw_src": "10.0.0.2",
-      "nw_dst": "10.0.0.3",
-      "actions": "DENY"
-    }
-  ]
-
+  "specific_rules": []
 }
