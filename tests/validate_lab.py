@@ -7,6 +7,8 @@ import requests
 
 RYU_HEALTH_URL = "http://127.0.0.1:8080/stats/switches"
 TOPOLOGY_PROCESS_NAME = "start_lab_topology.py"
+EXPECTED_SWITCHES = {1, 2, 3, 4}
+EXPECTED_BRIDGES = {"s1", "s2", "s3", "s4"}
 
 
 def run(cmd):
@@ -28,6 +30,15 @@ def main():
             print(f"Unexpected Ryu API response: {switches}")
             sys.exit(1)
         print(f"Ryu REST API is operational, connected switches: {switches}")
+
+        detected_switches = set(switches)
+        if detected_switches != EXPECTED_SWITCHES:
+            print(
+                "Topology contract mismatch on Ryu side: "
+                f"expected switches {sorted(EXPECTED_SWITCHES)}, "
+                f"got {sorted(detected_switches)}"
+            )
+            sys.exit(1)
     except Exception as e:
         print(f"Ryu API error: {e}")
         sys.exit(1)
@@ -52,6 +63,15 @@ def main():
         sys.exit(1)
 
     print(f"Detected OVS bridges: {', '.join(bridges)}")
+    detected_bridges = set(bridges)
+    if detected_bridges != EXPECTED_BRIDGES:
+        print(
+            "Topology contract mismatch on OVS side: "
+            f"expected bridges {sorted(EXPECTED_BRIDGES)}, "
+            f"got {sorted(detected_bridges)}"
+        )
+        sys.exit(1)
+
     print("Persistent lab validation succeeded")
     sys.exit(0)
 
