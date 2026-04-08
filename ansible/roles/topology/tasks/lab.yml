@@ -26,24 +26,47 @@
     tmux new-session -d -s mininet_lab 'sudo env PYTHONDONTWRITEBYTECODE=1 python3 {{ playbook_dir }}/../topology/start_lab_topology.py'
   become: yes
   when: existing_ovs.stdout == ""
+  register: tmux_result
 
-- name: Wait a few seconds for the topology to start (if newly launched)
+- name: Show tmux start result
+  debug:
+    msg: "Tmux session started with return code: {{ tmux_result.rc }}"
+
+- name: Wait for topology to fully initialize
   pause:
-    seconds: 120
+    seconds: 150
   when: existing_ovs.stdout == ""
 
-- name: Check that the tmux session is running
-  shell: tmux list-sessions | grep -q mininet_lab
+- name: Check if Mininet process is running
+  shell: pgrep -f "python3.*start_lab_topology.py"
   become: yes
-  when: existing_ovs.stdout == ""
+  register: mininet_process
+  changed_when: false
+  failed_when: false
+
+- name: Show Mininet process check
+  debug:
+    msg: "Mininet process found: {{ mininet_process.stdout_lines | default(['Not found']) }}"
+
+- name: Get tmux session details
+  shell: tmux display-message -p '#{session_name} #{session_windows}'
+  become: yes
+  ignore_errors: true
+  changed_when: false
 
 - name: Verify that OVS bridges now exist
   shell: ovs-vsctl list-br
   become: yes
   register: final_ovs_bridges
-  failed_when: final_ovs_bridges.stdout_lines | length == 0
+  retries: 5
+  delay: 10
+  until: final_ovs_bridges.stdout_lines | length > 0
   changed_when: false
 
 - name: Show final OVS bridges
   debug:
     msg: "{{ final_ovs_bridges.stdout_lines }}"
+
+- name: Show bridges count
+  debug:
+    msg: "Total bridges created: {{ final_ovs_bridges.stdout_lines | length }}"
