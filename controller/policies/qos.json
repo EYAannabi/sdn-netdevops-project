@@ -1,9 +1,10 @@
 {
-  "policing_rules": [{
-      "description": "Limiter h4 a 2 Mbps",
-      "interface": "s4-eth2",
-      "rate_kbps": 1500,
-      "burst_kb": 200
+  "policing_rules": [
+    {
+      "description": "Limiter h6 a 3 Mbps",
+      "interface": "s5-eth2",
+      "rate_kbps": 3000,
+      "burst_kb": 300
     }
   ]
 }

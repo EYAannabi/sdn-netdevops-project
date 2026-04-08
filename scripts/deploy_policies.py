@@ -20,10 +20,12 @@ HOST_EDGE_SWITCH = {
     "10.0.0.2": 3,  # h2 on s3
     "10.0.0.3": 4,  # h3 on s4
     "10.0.0.4": 4,  # h4 on s4
+    "10.0.0.5": 5,  # h5 on s5
+    "10.0.0.6": 5,  # h6 on s5
 }
 
 # For the OpenFlow /stats/* APIs
-OF_DPIDS = [1, 2, 3, 4]
+OF_DPIDS = [1, 2, 3, 4, 5]
 
 
 def apply_ovs_ingress_policing(interface: str, rate_kbps: int, burst_kb: int) -> None:
@@ -105,6 +107,10 @@ def get_port_name_for_qos_source(src_ip: str) -> str:
         return "s3-eth1"
     if src_ip == "10.0.0.2":
         return "s3-eth2"
+    if src_ip == "10.0.0.5":
+        return "s5-eth1"
+    if src_ip == "10.0.0.6":
+        return "s5-eth2"
     raise ValueError(f"Unknown QoS source IP: {src_ip}")
 
 

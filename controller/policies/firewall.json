@@ -15,11 +15,11 @@
   ],
   "specific_rules": [
     {
-      "description": "Interdire h2 d'acceder a h3",
+      "description": "Bloquer h5 vers h2",
       "priority": 65000,
       "dl_type": "IPv4",
-      "nw_src": "10.0.0.4",
-      "nw_dst": "10.0.0.1",
+      "nw_src": "10.0.0.5",
+      "nw_dst": "10.0.0.2",
       "actions": "DENY"
     }
   ]

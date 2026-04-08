@@ -58,6 +58,16 @@
     -- set bridge s4 sflow=@sflow
   become: yes
 
+- name: Enable sFlow on s5
+  shell: >
+    ovs-vsctl -- --id=@sflow create sflow
+    agent=s5
+    target=\"127.0.0.1:6343\"
+    sampling=10
+    polling=10
+    -- set bridge s5 sflow=@sflow
+  become: yes
+
 - name: Check Prometheus targets
   uri:
     url: http://127.0.0.1:9090/api/v1/targets
