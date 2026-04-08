@@ -47,7 +47,7 @@ def main():
     net.start()
 
     # Allow switches to connect and the controller to install initial flows
-    time.sleep(40)
+    time.sleep(60)
 
     info("*** Persistent lab topology is running.\n")
     info("*** Controller connected at %s:%s\n" % (CONTROLLER_IP, CONTROLLER_PORT))
