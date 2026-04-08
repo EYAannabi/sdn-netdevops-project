@@ -29,7 +29,12 @@
 
 - name: Wait a few seconds for the topology to start (if newly launched)
   pause:
-    seconds: 60
+    seconds: 120
+  when: existing_ovs.stdout == ""
+
+- name: Check that the tmux session is running
+  shell: tmux list-sessions | grep -q mininet_lab
+  become: yes
   when: existing_ovs.stdout == ""
 
 - name: Verify that OVS bridges now exist
