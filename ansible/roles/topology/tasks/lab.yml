@@ -29,7 +29,7 @@
 
 - name: Wait a few seconds for the topology to start (if newly launched)
   pause:
-    seconds: 15
+    seconds: 60
   when: existing_ovs.stdout == ""
 
 - name: Verify that OVS bridges now exist
