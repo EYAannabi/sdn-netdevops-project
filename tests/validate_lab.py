@@ -28,6 +28,12 @@ def main():
             print(f"Unexpected Ryu API response: {switches}")
             sys.exit(1)
         print(f"Ryu REST API is operational, connected switches: {switches}")
+        
+        # Validate topology contract: expect 5 switches (2 spine + 3 leaf)
+        expected_switches = [1, 2, 3, 4, 5]
+        if sorted(switches) != sorted(expected_switches):
+            print(f"Topology contract mismatch on Ryu side: expected switches {sorted(expected_switches)}, got {sorted(switches)}")
+            sys.exit(1)
     except Exception as e:
         print(f"Ryu API error: {e}")
         sys.exit(1)
