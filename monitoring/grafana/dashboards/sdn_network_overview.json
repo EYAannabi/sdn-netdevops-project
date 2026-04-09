@@ -17,19 +17,19 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 169,
+  "iteration": 170,
   "links": [],
   "panels": [
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "bps",
+          "unit": "none",
           "min": 0
         },
         "overrides": []
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
       "id": 1,
       "options": {
         "legend": {"displayMode": "list", "placement": "bottom"},
@@ -37,14 +37,95 @@
       },
       "targets": [
         {
-          "expr": "sum by (dpid, port_no) (rate(ryu_port_tx_bytes[1m]))",
+          "expr": "max(up{job=\"ryu_exporter\"})",
           "format": "time_series",
           "interval": "",
-          "legendFormat": "switch {{dpid}} / port {{port_no}}",
+          "legendFormat": "Ryu Exporter",
           "refId": "A"
         }
       ],
-      "title": "Ryu TX throughput (rate)",
+      "title": "Ryu Exporter up",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "max(up{job=\"prometheus\"})",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Prometheus",
+          "refId": "A"
+        }
+      ],
+      "title": "Prometheus up",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "max(up{job=~\"sflow-rt.*\"})",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "sFlow-RT",
+          "refId": "A"
+        }
+      ],
+      "title": "sFlow-RT up",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "count(count by (dpid)(ryu_port_rx_bytes))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Switches détectés",
+          "refId": "A"
+        }
+      ],
+      "title": "Nombre de switches connectés",
       "type": "timeseries"
     },
     {
@@ -56,79 +137,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-      "id": 2,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "sum by (dpid, port_no) (rate(ryu_port_rx_bytes[1m]))",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "switch {{dpid}} / port {{port_no}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Ryu RX throughput (rate)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {"unit": "bytes"},
-        "overrides": []
-      },
-      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 8},
-      "id": 3,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "sum by (dpid, port_no) (ryu_port_tx_bytes + ryu_port_rx_bytes)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "switch {{dpid}} / port {{port_no}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Ryu total bytes par port",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {"unit": "bps", "min": 0},
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
-      "id": 4,
-      "options": {
-        "legend": {"displayMode": "table", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "topk(10, sflow_flows_bps)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "{{ipsource}} → {{ipdestination}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Top talkers sFlow (bps)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {"unit": "bps", "min": 0},
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
       "id": 5,
       "options": {
         "legend": {"displayMode": "list", "placement": "bottom"},
@@ -136,14 +145,227 @@
       },
       "targets": [
         {
-          "expr": "sum by (agent) (sflow_flows_bps)",
+          "expr": "sum by (dpid) (rate(ryu_port_rx_bytes[1m]) * 8)",
           "format": "time_series",
           "interval": "",
-          "legendFormat": "Agent {{agent}}",
+          "legendFormat": "switch {{dpid}}",
           "refId": "A"
         }
       ],
-      "title": "sFlow traffic par agent",
+      "title": "Trafic entrant par switch",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+      "id": 6,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "sum by (dpid) (rate(ryu_port_tx_bytes[1m]) * 8)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "switch {{dpid}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Trafic sortant par switch",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "id": 7,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "topk(10, rate(ryu_port_rx_bytes[1m]) * 8)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "switch {{dpid}} / port {{port_no}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top ports RX",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "id": 8,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "topk(10, rate(ryu_port_tx_bytes[1m]) * 8)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "switch {{dpid}} / port {{port_no}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top ports TX",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 2000000},
+              {"color": "red", "value": 5000000}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
+      "id": 9,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.4\"}[30s]) or vector(0)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "h1 → h4",
+          "refId": "A"
+        }
+      ],
+      "title": "Flux h1 -> h4 (firewall)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 2000000},
+              {"color": "red", "value": 5000000}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
+      "id": 10,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}[30s]) or vector(0)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "h1 → h3",
+          "refId": "A"
+        }
+      ],
+      "title": "Flux h1 -> h3 (QoS 5 Mbps) ",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 1000000},
+              {"color": "red", "value": 2000000}
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+      "id": 11,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.4\",ipdestination=\"10.0.0.1\"}[30s]) or vector(0)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "h4 → h1",
+          "refId": "A"
+        }
+      ],
+      "title": "Flux h4 -> h1 (QoS 2 Mbps)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+      "id": 12,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "sum by (dpid, port_no) (rate(ryu_port_tx_bytes{dpid=~\"1|2\",port_no=~\"1|2\"}[30s]) * 8)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "switch {{dpid}} / port {{port_no}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Failover uplinks (s1/s2 ports 1/2)",
       "type": "timeseries"
     },
     {
@@ -152,20 +374,20 @@
         "defaults": {"min": 0},
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 22},
-      "id": 6,
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 38},
+      "id": 13,
       "options": {
-        "content": "### Instructions de validation\n- Lancez vos tests `ping` et `iperf` dans Mininet.\n- Surveillez les graphiques Ryu pour le trafic par port.\n- Surveillez les graphiques sFlow pour les flux applicatifs et les top talkers.\n- Un pic de débit visible sur ces panels confirme l'exécution des tests réseau.",
+        "content": "### Scénarios de test recommandés\n- Test 3 : bloquer h1->h4, autoriser h2->h4, limiter h1->h3, couper puis restaurer s1-s3.\n- Test 4 : bloquer h2->h3, autoriser h1->h3, limiter h4->h1, couper puis restaurer s1-s2.\n- Si le flux blockade h1->h4 reste à zéro, le firewall est appliqué.\n- Si le flux h1->h3 monte près de 5 Mbps et reste plafonné, la QoS est active.\n- Si le flux h4->h1 monte sous 2 Mbps, la QoS invitée est active.\n- Surveillez les uplinks pour voir les changements lorsque vous baissez / remontez les liens.",
         "mode": "markdown"
       },
-      "title": "Guide de validation ping / iperf",
+      "title": "Guide de tests avancés",
       "type": "text"
     }
   ],
   "refresh": "10s",
   "schemaVersion": 36,
   "style": "dark",
-  "tags": ["sdn", "ryu", "sflow", "monitoring"],
+  "tags": ["sdn", "ryu", "sflow", "monitoring", "firewall", "qos"],
   "templating": {"list": []},
   "time": {"from": "now-5m", "to": "now"},
   "timepicker": {},
