@@ -1,0 +1,240 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Dashboard orientee validation des tests ping, iperf, firewall, QoS et failover.",
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "fieldConfig": {
+        "defaults": { "min": 0 },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "content": "## Scenarios de validation\n\n### Test 1: baseline\n- pingall\n- h1 ping -c 3 h4\n- h1 iperf -s -u -p 5001 &\n- h4 iperf -c 10.0.0.1 -u -p 5001 -b 10M -t 10\n- link s1 s3 down\n- h2 ping -c 3 h3\n- link s1 s3 up\n\n### Test 2: firewall h1-h4 + QoS h1-h3\n- h1 ping -c 2 h4\n- h2 ping -c 2 h4\n- h3 iperf -s -u -p 5001 &\n- h1 iperf -c 10.0.0.3 -u -p 5001 -b 50M -t 10\n- link s1 s3 down\n- h2 ping -c 2 h4\n- link s1 s3 up\n\n### Test 3: firewall h2-h3 + QoS h4-h1\n- h2 ping -c 2 h3\n- h1 ping -c 2 h3\n- h1 iperf -s -u -p 5001 &\n- h4 iperf -c 10.0.0.1 -u -p 5001 -b 10M -t 10\n- link s1 s2 down\n- h1 ping -c 2 h4\n- link s1 s2 up",
+        "mode": "markdown"
+      },
+      "title": "Guide des tests",
+      "type": "text"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 6 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.4\"}[20s]) or vector(0)", "legendFormat": "h1 -> h4", "refId": "A" }
+      ],
+      "title": "Flux observe h1 -> h4 (interdit)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "max": 6000000,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 4000000 },
+              { "color": "orange", "value": 5000000 },
+              { "color": "red", "value": 5500000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 6 },
+      "id": 3,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}[20s]) or vector(0)", "legendFormat": "h1 -> h3", "refId": "A" }
+      ],
+      "title": "QoS h1 -> h3 plafonne a 5 Mbps",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "bps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 6 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["last", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.4\"}[20s]) or vector(0)", "legendFormat": "DENY h1 -> h4", "refId": "A" },
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.2\",ipdestination=\"10.0.0.4\"}[20s]) or vector(0)", "legendFormat": "ALLOW h2 -> h4", "refId": "B" },
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}[20s]) or vector(0)", "legendFormat": "QoS h1 -> h3", "refId": "C" }
+      ],
+      "title": "Test 2 - Comparaison des flux",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 14 },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.2\",ipdestination=\"10.0.0.3\"}[20s]) or vector(0)", "legendFormat": "h2 -> h3", "refId": "A" }
+      ],
+      "title": "Flux observe h2 -> h3 (interdit)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "max": 3000000,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1500000 },
+              { "color": "orange", "value": 2000000 },
+              { "color": "red", "value": 2200000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 14 },
+      "id": 6,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.4\",ipdestination=\"10.0.0.1\"}[20s]) or vector(0)", "legendFormat": "h4 -> h1", "refId": "A" }
+      ],
+      "title": "QoS h4 -> h1 plafonne a 2 Mbps",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "bps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 14 },
+      "id": 7,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["last", "max"] },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.2\",ipdestination=\"10.0.0.3\"}[20s]) or vector(0)", "legendFormat": "DENY h2 -> h3", "refId": "A" },
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}[20s]) or vector(0)", "legendFormat": "ALLOW h1 -> h3", "refId": "B" },
+        { "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.4\",ipdestination=\"10.0.0.1\"}[20s]) or vector(0)", "legendFormat": "QoS h4 -> h1", "refId": "C" }
+      ],
+      "title": "Test 3 - Comparaison des flux",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "bps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 22 },
+      "id": 8,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"1\",port_no=\"1\"}[30s]) * 8", "legendFormat": "s1 -> s3", "refId": "A" },
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"2\",port_no=\"1\"}[30s]) * 8", "legendFormat": "s2 -> s3", "refId": "B" },
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"1\",port_no=\"2\"}[30s]) * 8", "legendFormat": "s1 -> s4", "refId": "C" },
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"2\",port_no=\"2\"}[30s]) * 8", "legendFormat": "s2 -> s4", "refId": "D" }
+      ],
+      "title": "Failover uplinks",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "bps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 22 },
+      "id": 9,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "topk(10, sflow_flows_bps)", "legendFormat": "{{ipsource}} -> {{ipdestination}}", "refId": "A" }
+      ],
+      "title": "Top sFlow IP Flows pendant les tests",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["sdn", "tests", "firewall", "qos", "failover", "iperf", "ping"],
+  "templating": { "list": [] },
+  "time": { "from": "now-5m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SDN Test Validation",
+  "uid": "sdn_test_validation",
+  "version": 1
+}
