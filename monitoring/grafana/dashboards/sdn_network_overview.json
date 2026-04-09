@@ -1,0 +1,175 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "#000000",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Dashboard SDN unifié pour Ryu exporter et sFlow-RT. Utiliser ping/iperf dans Mininet pour générer du trafic et observer les métriques.",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": 169,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "sum by (dpid, port_no) (rate(ryu_port_tx_bytes[1m]))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "switch {{dpid}} / port {{port_no}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Ryu TX throughput (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "sum by (dpid, port_no) (rate(ryu_port_rx_bytes[1m]))",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "switch {{dpid}} / port {{port_no}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Ryu RX throughput (rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {"unit": "bytes"},
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 8},
+      "id": 3,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "sum by (dpid, port_no) (ryu_port_tx_bytes + ryu_port_rx_bytes)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "switch {{dpid}} / port {{port_no}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Ryu total bytes par port",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {"unit": "bps", "min": 0},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "id": 4,
+      "options": {
+        "legend": {"displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sflow_flows_bps)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "{{ipsource}} → {{ipdestination}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top talkers sFlow (bps)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {"unit": "bps", "min": 0},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "id": 5,
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "single"}
+      },
+      "targets": [
+        {
+          "expr": "sum by (agent) (sflow_flows_bps)",
+          "format": "time_series",
+          "interval": "",
+          "legendFormat": "Agent {{agent}}",
+          "refId": "A"
+        }
+      ],
+      "title": "sFlow traffic par agent",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {"min": 0},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 22},
+      "id": 6,
+      "options": {
+        "content": "### Instructions de validation\n- Lancez vos tests `ping` et `iperf` dans Mininet.\n- Surveillez les graphiques Ryu pour le trafic par port.\n- Surveillez les graphiques sFlow pour les flux applicatifs et les top talkers.\n- Un pic de débit visible sur ces panels confirme l'exécution des tests réseau.",
+        "mode": "markdown"
+      },
+      "title": "Guide de validation ping / iperf",
+      "type": "text"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["sdn", "ryu", "sflow", "monitoring"],
+  "templating": {"list": []},
+  "time": {"from": "now-5m", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SDN Monitoring - Ryu & sFlow",
+  "uid": "sdn_network_overview"
+}

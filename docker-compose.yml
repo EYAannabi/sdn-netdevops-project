@@ -34,7 +34,10 @@ services:
       - "3001:3000"
     volumes:
       # Sauvegarde tes Dashboards et Data Sources
-      - grafana_data:/var/lib/grafana 
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - sdn_net
     restart: unless-stopped
