@@ -12,120 +12,151 @@
       }
     ]
   },
-  "description": "Dashboard SDN unifié pour Ryu exporter et sFlow-RT. Utiliser ping/iperf dans Mininet pour générer du trafic et observer les métriques.",
+  "description": "Dashboard SDN complet : santé, firewall (Stat + Time series), QoS (Gauges), flux autorisés, failover. Couvre Test 2, 3, 4.",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 170,
+  "iteration": 200,
   "links": [],
   "panels": [
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
       "id": 1,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "max(up{job=\"ryu_exporter\"})",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "Ryu Exporter",
-          "refId": "A"
-        }
-      ],
-      "title": "Ryu Exporter up",
+      "targets": [{"expr": "max(up{job=\"ryu_exporter\"})", "legendFormat": "Ryu", "refId": "A"}],
+      "title": "Ryu Exporter UP",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
       "id": 2,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "max(up{job=\"prometheus\"})",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "Prometheus",
-          "refId": "A"
-        }
-      ],
-      "title": "Prometheus up",
+      "targets": [{"expr": "max(up{job=\"prometheus\"})", "legendFormat": "Prometheus", "refId": "A"}],
+      "title": "Prometheus UP",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
       "id": 3,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "max(up{job=~\"sflow-rt.*\"})",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "sFlow-RT",
-          "refId": "A"
-        }
-      ],
-      "title": "sFlow-RT up",
+      "targets": [{"expr": "max(up{job=~\"sflow-rt.*\"})", "legendFormat": "sFlow-RT", "refId": "A"}],
+      "title": "sFlow-RT UP",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "targets": [{"expr": "count(count by (dpid)(ryu_port_rx_bytes))", "legendFormat": "Switches", "refId": "A"}],
+      "title": "Switches Connectés",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "min": 0
+          "unit": "short",
+          "mappings": [{"type": "value", "value": "1", "text": "BLOCKED"}, {"type": "value", "value": "0", "text": "TRAFFIC"}],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0},
-      "id": 4,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+      "id": 5,
+      "options": {"colorMode": "background", "graphMode": "none", "orientation": "auto"},
+      "targets": [{"expr": "((sum(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.4\"}) or vector(0)) <= bool 0.1) or vector(1)", "legendFormat": "h1->h4", "refId": "A"}],
+      "title": "Firewall h1→h4 (DENY)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [{"type": "value", "value": "1", "text": "BLOCKED"}, {"type": "value", "value": "0", "text": "TRAFFIC"}],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}
+        },
+        "overrides": []
       },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 4},
+      "id": 6,
+      "options": {"colorMode": "background", "graphMode": "none", "orientation": "auto"},
+      "targets": [{"expr": "((sum(sflow_flows_bps{ipsource=\"10.0.0.4\",ipdestination=\"10.0.0.1\"}) or vector(0)) <= bool 0.1) or vector(1)", "legendFormat": "h4->h1", "refId": "A"}],
+      "title": "Firewall h4→h1 (DENY Test 4)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [{"type": "value", "value": "1", "text": "BLOCKED"}, {"type": "value", "value": "0", "text": "TRAFFIC"}],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+      "id": 7,
+      "options": {"colorMode": "background", "graphMode": "none", "orientation": "auto"},
+      "targets": [{"expr": "((sum(sflow_flows_bps{ipsource=\"10.0.0.2\",ipdestination=\"10.0.0.3\"}) or vector(0)) <= bool 0.1) or vector(1)", "legendFormat": "h2->h3", "refId": "A"}],
+      "title": "Firewall h2→h3 (DENY Test 4)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "max": 1000000,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 100000}, {"color": "red", "value": 500000}]}
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 4},
+      "id": 8,
+      "options": {"orientation": "auto", "showThresholdLabels": true, "showThresholdMarkers": true},
+      "targets": [{"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.2\",ipdestination=\"10.0.0.4\"}) or vector(0)", "legendFormat": "h2→h4", "refId": "A"}],
+      "title": "Flux autorisé h2→h4",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {"unit": "bps", "min": 0},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 9,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
       "targets": [
-        {
-          "expr": "count(count by (dpid)(ryu_port_rx_bytes))",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "Switches détectés",
-          "refId": "A"
-        }
+        {"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.4\"}) or vector(0)", "legendFormat": "DENY h1→h4", "refId": "A"},
+        {"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.2\",ipdestination=\"10.0.0.4\"}) or vector(0)", "legendFormat": "ALLOW h2→h4", "refId": "B"},
+        {"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}) or vector(0)", "legendFormat": "QoS h1→h3 (5 Mbps)", "refId": "C"}
       ],
-      "title": "Nombre de switches connectés",
+      "title": "Comparaison : Firewall vs Flux autorisés vs QoS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {"unit": "bps", "min": 0},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 10,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [
+        {"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.4\",ipdestination=\"10.0.0.1\"}) or vector(0)", "legendFormat": "DENY h4→h1 (Test 4)", "refId": "A"},
+        {"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}) or vector(0)", "legendFormat": "QoS h1→h3", "refId": "B"},
+        {"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.2\",ipdestination=\"10.0.0.3\"}) or vector(0)", "legendFormat": "DENY h2→h3 (Test 4)", "refId": "C"}
+      ],
+      "title": "Test 4 : blocages et flux alternatifs",
       "type": "timeseries"
     },
     {
@@ -133,265 +164,98 @@
       "fieldConfig": {
         "defaults": {
           "unit": "bps",
-          "min": 0
+          "min": 0,
+          "max": 6000000,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 5000000}, {"color": "red", "value": 5500000}]}
         },
         "overrides": []
       },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
-      "id": 5,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 16},
+      "id": 11,
+      "options": {"orientation": "auto", "showThresholdLabels": true, "showThresholdMarkers": true},
+      "targets": [{"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}) or vector(0)", "legendFormat": "h1→h3", "refId": "A"}],
+      "title": "QoS h1→h3 (plafond 5 Mbps)",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "min": 0,
+          "max": 3000000,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 2000000}, {"color": "red", "value": 2200000}]}
+        },
+        "overrides": []
       },
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 16},
+      "id": 12,
+      "options": {"orientation": "auto", "showThresholdLabels": true, "showThresholdMarkers": true},
+      "targets": [{"expr": "sum(sflow_flows_bps{ipsource=\"10.0.0.4\",ipdestination=\"10.0.0.1\"}) or vector(0)", "legendFormat": "h4→h1", "refId": "A"}],
+      "title": "QoS h4→h1 (plafond 2 Mbps)",
+      "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {"unit": "bps", "min": 0},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 13,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
       "targets": [
-        {
-          "expr": "sum by (dpid) (rate(ryu_port_rx_bytes[1m]) * 8)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "switch {{dpid}}",
-          "refId": "A"
-        }
+        {"expr": "rate(ryu_port_tx_bytes{dpid=\"1\",port_no=\"1\"}[30s]) * 8", "legendFormat": "s1 → s3 (port 1-3)", "refId": "A"},
+        {"expr": "rate(ryu_port_tx_bytes{dpid=\"2\",port_no=\"1\"}[30s]) * 8", "legendFormat": "s2 → s3 (port 1-4)", "refId": "B"},
+        {"expr": "rate(ryu_port_tx_bytes{dpid=\"1\",port_no=\"2\"}[30s]) * 8", "legendFormat": "s1 → s4 (port 2-3)", "refId": "C"},
+        {"expr": "rate(ryu_port_tx_bytes{dpid=\"2\",port_no=\"2\"}[30s]) * 8", "legendFormat": "s2 → s4 (port 2-4)", "refId": "D"}
+      ],
+      "title": "Failover uplinks (coupure s1-s3 / s1-s2)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {"defaults": {"unit": "bps", "min": 0}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "id": 14,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "targets": [
+        {"expr": "sum by (dpid) (rate(ryu_port_rx_bytes[1m]) * 8)", "legendFormat": "switch {{dpid}}", "refId": "A"}
       ],
       "title": "Trafic entrant par switch",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
-      "id": 6,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
+      "fieldConfig": {"defaults": {"unit": "bps", "min": 0}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+      "id": 15,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
       "targets": [
-        {
-          "expr": "sum by (dpid) (rate(ryu_port_tx_bytes[1m]) * 8)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "switch {{dpid}}",
-          "refId": "A"
-        }
+        {"expr": "sum by (dpid) (rate(ryu_port_tx_bytes[1m]) * 8)", "legendFormat": "switch {{dpid}}", "refId": "A"}
       ],
       "title": "Trafic sortant par switch",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
-      "id": 7,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "topk(10, rate(ryu_port_rx_bytes[1m]) * 8)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "switch {{dpid}} / port {{port_no}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Top ports RX",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
-      "id": 8,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "topk(10, rate(ryu_port_tx_bytes[1m]) * 8)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "switch {{dpid}} / port {{port_no}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Top ports TX",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 2000000},
-              {"color": "red", "value": 5000000}
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 22},
-      "id": 9,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.4\"}[30s]) or vector(0)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "h1 → h4",
-          "refId": "A"
-        }
-      ],
-      "title": "Flux h1 -> h4 (firewall)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 2000000},
-              {"color": "red", "value": 5000000}
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 22},
-      "id": 10,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.1\",ipdestination=\"10.0.0.3\"}[30s]) or vector(0)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "h1 → h3",
-          "refId": "A"
-        }
-      ],
-      "title": "Flux h1 -> h3 (QoS 5 Mbps) ",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "green", "value": null},
-              {"color": "yellow", "value": 1000000},
-              {"color": "red", "value": 2000000}
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
-      "id": 11,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "max_over_time(sflow_flows_bps{ipsource=\"10.0.0.4\",ipdestination=\"10.0.0.1\"}[30s]) or vector(0)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "h4 → h1",
-          "refId": "A"
-        }
-      ],
-      "title": "Flux h4 -> h1 (QoS 2 Mbps)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bps",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
-      "id": 12,
-      "options": {
-        "legend": {"displayMode": "list", "placement": "bottom"},
-        "tooltip": {"mode": "single"}
-      },
-      "targets": [
-        {
-          "expr": "sum by (dpid, port_no) (rate(ryu_port_tx_bytes{dpid=~\"1|2\",port_no=~\"1|2\"}[30s]) * 8)",
-          "format": "time_series",
-          "interval": "",
-          "legendFormat": "switch {{dpid}} / port {{port_no}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Failover uplinks (s1/s2 ports 1/2)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {"min": 0},
-        "overrides": []
-      },
-      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 38},
-      "id": 13,
-      "options": {
-        "content": "### Scénarios de test recommandés\n- Test 3 : bloquer h1->h4, autoriser h2->h4, limiter h1->h3, couper puis restaurer s1-s3.\n- Test 4 : bloquer h2->h3, autoriser h1->h3, limiter h4->h1, couper puis restaurer s1-s2.\n- Si le flux blockade h1->h4 reste à zéro, le firewall est appliqué.\n- Si le flux h1->h3 monte près de 5 Mbps et reste plafonné, la QoS est active.\n- Si le flux h4->h1 monte sous 2 Mbps, la QoS invitée est active.\n- Surveillez les uplinks pour voir les changements lorsque vous baissez / remontez les liens.",
-        "mode": "markdown"
-      },
-      "title": "Guide de tests avancés",
+      "fieldConfig": {"defaults": {"min": 0}, "overrides": []},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 32},
+      "id": 16,
+      "options": {"content": "### 🔍 Tutoriel d'observation\n\n**Test 2 (Demo simple)**\n- `pingall` → observe le trafic global\n- `h1 ping -c 3 h4` → vérifiez la bande passante\n- `h1 iperf -s -u -p 5001 &` puis `h4 iperf -c 10.0.0.1 -b 10M -t 10`\n- `link s1 s3 down` → obs failover uplinks\n\n**Test 3 (Firewall h1↔h4 + QoS h1→h3)**\n- Panel Firewall h1→h4 (BLOCKED) doit rester rouge\n- Panel Firewall h4→h1 doit aussi rester rouge\n- Panel QoS h1→h3 (Gauge) doit monter et plafonner à ~5 Mbps\n- Panel Flux autorisé h2→h4 doit être vert et actif\n\n**Test 4 (Firewall h2↔h3 + QoS h4→h1)**\n- Panel Firewall h2→h3 (BLOCKED) doit rester rouge\n- Panel QoS h4→h1 (Gauge) doit monter et plafonner à ~2 Mbps\n- Panel Test 4 affiche DENY h4→h1 + DENY h2→h3 + QoS h1→h3\n\n**Failover**\n- Surveiller le panel Failover uplinks lors de `link s1 s3 down`\n- S'attend à voir un pic sur le chemin alternatif (s2 paths)",
+        "mode": "markdown"},
+      "title": "📋 Guide complet de test",
       "type": "text"
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "schemaVersion": 36,
   "style": "dark",
-  "tags": ["sdn", "ryu", "sflow", "monitoring", "firewall", "qos"],
+  "tags": ["sdn", "ryu", "sflow", "firewall", "qos", "failover"],
   "templating": {"list": []},
   "time": {"from": "now-5m", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
-  "title": "SDN Monitoring - Ryu & sFlow",
-  "uid": "sdn_network_overview"
+  "title": "SDN Monitoring - Complet (Firewall + QoS + Failover)",
+  "uid": "sdn_complete_tests"
 }
