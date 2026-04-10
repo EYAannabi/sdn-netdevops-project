@@ -3,11 +3,6 @@
   become: yes
   ignore_errors: yes
 
-- name: Build Docker image
-  command: docker build -t mon-ryu:v2 -f docker/Dockerfile .
-  args:
-    chdir: "{{ playbook_dir }}/.."
-
 - name: Ensure Docker network exists
   shell: docker network create sdn_net || true
 
