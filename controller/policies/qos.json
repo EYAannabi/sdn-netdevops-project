@@ -3,7 +3,7 @@
      {
       "description": "Limiter h1 a 5 Mbps",
       "interface": "s3-eth1",
-      "rate_kbps": 5000,
+      "rate_kbps": 15000,
       "burst_kb": 500
     }
 
