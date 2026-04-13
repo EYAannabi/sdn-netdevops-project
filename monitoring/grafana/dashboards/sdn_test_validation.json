@@ -1,0 +1,86 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Validation agnostique des regles NetDevOps: Preuve QoS, validation Firewall et failover de la topologie.",
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "content": "## 🧪 Validation NetDevOps Dynamique\nCe tableau de bord s'adapte automatiquement à tes politiques JSON.\n- **Firewall :** Si un ping/iperf est bloqué par Ryu, il n'apparaîtra **jamais** dans les panneaux de flux ci-dessous.\n- **QoS :** Si un flux est bridé, sa courbe formera un \"plateau\" visible dans le panneau *Preuve QoS*.\n- **Failover :** Coupe un lien physique (`link s1 s3 down`) pour voir le basculement instantané dans le panneau *Résilience*.",
+        "mode": "markdown"
+      },
+      "title": "Guide NetDevOps",
+      "type": "text"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "bps", "custom": { "fillOpacity": 20, "lineWidth": 2 } } },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 6 },
+      "id": 2,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max", "mean"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "topk(5, sflow_flows_bps)", "legendFormat": "{{ipsource}} -> {{ipdestination}}" }
+      ],
+      "title": "🎯 Preuve QoS & Firewall : Top 5 Flux IP Actifs (Bandwidth)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "bps", "custom": { "fillOpacity": 10 } } },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 6 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "topk(5, rate(ryu_port_rx_bytes[10s]) * 8)", "legendFormat": "s{{dpid}} / port {{port_no}}" }
+      ],
+      "title": "⚙️ Preuve Hardware : Top 5 Ports Switch (Détection Policing)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "bps", "custom": { "fillOpacity": 30 } } },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"1\",port_no=\"1\"}[10s]) * 8", "legendFormat": "Spine 1 -> Leaf 3 (s1-p1)" },
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"2\",port_no=\"1\"}[10s]) * 8", "legendFormat": "Spine 2 -> Leaf 3 (s2-p1)" },
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"1\",port_no=\"2\"}[10s]) * 8", "legendFormat": "Spine 1 -> Leaf 4 (s1-p2)" },
+        { "expr": "rate(ryu_port_tx_bytes{dpid=\"2\",port_no=\"2\"}[10s]) * 8", "legendFormat": "Spine 2 -> Leaf 4 (s2-p2)" }
+      ],
+      "title": "🔄 Preuve Résilience : Basculement automatique des Uplinks (Failover)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": ["sdn", "validation", "firewall", "qos"],
+  "time": { "from": "now-5m", "to": "now" },
+  "timezone": "browser",
+  "title": "SDN 2. Validation NetDevOps",
+  "uid": "sdn_validation"
+}
