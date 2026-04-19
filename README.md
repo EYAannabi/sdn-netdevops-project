@@ -50,9 +50,8 @@ The controller startup flow is:
 
 The currently loaded Ryu apps are:
 
-- `ryu.app.simple_switch_stp_13`
+- `controller.apps.datacenter_controller`
 - `ryu.app.ofctl_rest`
-- `ryu.app.rest_firewall`
 
 ## Topology Design
 
@@ -95,7 +94,7 @@ It performs three main actions:
 
 Firewall behavior:
 
-- global `ALLOW` rules are applied through the Ryu firewall REST module
+- global `ALLOW` rules are kept as implicit forwarding behavior in the custom controller
 - `DENY` rules are translated into explicit OpenFlow drop flows
 
 QoS behavior:
@@ -218,6 +217,294 @@ Important ports:
 - Grafana: `3001`
 - sFlow-RT: `8008`
 - sFlow UDP: `6343/udp`
+
+## Step-by-Step Deployment Guide
+
+This section explains how to deploy the project from scratch on a fresh Ubuntu virtual machine. It covers system preparation, dependency installation, GitHub access, first manual tests, and self-hosted GitHub Actions setup.
+
+Recommended target:
+
+- Ubuntu 22.04 or 24.04 VM
+- a user account with `sudo` privileges
+- internet access for package installation and GitHub access
+
+### Phase 1. System Preparation and Dependencies
+
+#### 1. Update the system
+
+Start by refreshing package indexes and upgrading installed packages:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+#### 2. Install core tools
+
+These packages are useful for cloning the repository, troubleshooting networking, and building dependencies:
+
+```bash
+sudo apt install -y git curl wget net-tools build-essential
+```
+
+If you are using VMware or VirtualBox, you can also install guest utilities:
+
+```bash
+sudo apt install -y open-vm-tools open-vm-tools-desktop
+```
+
+#### 3. Install Docker
+
+The controller and monitoring stack rely on Docker and Docker Compose:
+
+```bash
+sudo apt install -y docker.io docker-compose
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+The `newgrp docker` command reloads your group membership in the current shell so you can run Docker without `sudo`.
+
+#### 4. Install SDN infrastructure tools
+
+Mininet and Open vSwitch are required to emulate the topology and apply switching behavior:
+
+```bash
+sudo apt install -y mininet openvswitch-switch xterm
+sudo systemctl enable openvswitch-switch
+sudo systemctl start openvswitch-switch
+```
+
+#### 5. Install Ansible and Python dependencies
+
+Ansible is used to orchestrate both CI-style and lab-style deployments. Python dependencies are needed by the controller tooling and monitoring helpers:
+
+```bash
+sudo apt install -y ansible python3-pip
+pip3 install requests pyyaml prometheus_client
+```
+
+### Phase 2. GitHub Integration and Workspace Setup
+
+#### 1. Configure Git identity
+
+Set your Git author information before making changes:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+#### 2. Generate and register an SSH key
+
+Create an SSH key so you can clone and push without entering your GitHub password every time:
+
+```bash
+ssh-keygen -t ed25519 -C "your.email@example.com"
+```
+
+Accept the default path and choose a passphrase if you want extra protection. Then display the public key:
+
+```bash
+cat ~/.ssh/id_ed25519.pub
+```
+
+Copy the output and add it in GitHub:
+
+1. Go to `GitHub -> Settings -> SSH and GPG keys -> New SSH key`
+2. Paste the public key
+3. Save it
+
+Test the connection:
+
+```bash
+ssh -T git@github.com
+```
+
+If prompted, type `yes` to trust GitHub's host key.
+
+#### 3. Clone the repository
+
+Fork the project or clone your own copy, then move into the workspace:
+
+```bash
+git clone git@github.com:YourUsername/sdn-netdevops-project.git
+cd sdn-netdevops-project
+```
+
+#### 4. Install VS Code
+
+If you want to edit and inspect the project directly inside the VM:
+
+```bash
+sudo snap install --classic code
+code .
+```
+
+### Phase 3. Infrastructure Prerequisites and Manual Validation
+
+Before relying on GitHub Actions, it is a good idea to verify that the base infrastructure works locally.
+
+#### 1. Create the Docker network
+
+The Compose stack expects an external Docker network:
+
+```bash
+docker network create sdn_net
+```
+
+This only needs to be done once per VM.
+
+#### 2. Build the controller image
+
+Build the Ryu controller image manually:
+
+```bash
+docker build -t mon-ryu:v2 -f docker/Dockerfile .
+```
+
+#### 3. Clean the environment when needed
+
+If a previous test left Mininet bridges, containers, or stale state behind, clean the lab before retrying:
+
+```bash
+sudo mn -c
+sudo ovs-vsctl --if-exists del-br s1
+sudo ovs-vsctl --if-exists del-br s2
+sudo ovs-vsctl --if-exists del-br s3
+sudo ovs-vsctl --if-exists del-br s4
+docker rm -f sdn-controller grafana prometheus ryu_exporter sflow-rt 2>/dev/null || true
+```
+
+#### 4. Run the Ansible playbooks manually
+
+Use these playbooks to confirm the environment is correctly configured before automating it:
+
+```bash
+ansible-playbook ansible/deploy_ci.yml -i ansible/inventory.ini
+ansible-playbook ansible/deploy_lab.yml -i ansible/inventory.ini
+```
+
+If both playbooks complete successfully, the VM is ready for normal project use.
+
+### Phase 4. Configure the CI/CD Pipeline
+
+This project uses a self-hosted GitHub Actions runner because Mininet and Open vSwitch must run directly on the VM.
+
+#### 1. Allow passwordless sudo
+
+The self-hosted runner needs to execute network and Mininet commands non-interactively:
+
+```bash
+sudo visudo
+```
+
+Add the following line at the end of the file, replacing `ubuntu` with your actual VM username:
+
+```text
+ubuntu ALL=(ALL) NOPASSWD:ALL
+```
+
+#### 2. Add the self-hosted GitHub runner
+
+In your GitHub repository:
+
+1. Go to `Settings -> Actions -> Runners`
+2. Click `New self-hosted runner`
+3. Choose `Linux` and `x64`
+4. Run the generated download and configuration commands on the VM
+
+Start the runner with:
+
+```bash
+./run.sh
+```
+
+To keep it persistent across reboots, install it as a service:
+
+```bash
+sudo ./svc.sh install
+sudo ./svc.sh start
+```
+
+#### 3. Trigger the pipeline
+
+Push a commit to launch the workflows:
+
+```bash
+git commit --allow-empty -m "Trigger CI/CD pipeline"
+git push
+```
+
+You can then watch execution in the `Actions` tab of your repository.
+
+### Phase 5. Interact with the Persistent Lab
+
+After a successful lab deployment, you can observe services and validate network behavior manually.
+
+#### 1. Open the monitoring dashboards
+
+Use the VM IP address instead of `localhost` if you are connecting from another machine.
+
+- Grafana: `http://localhost:3001`
+- Prometheus: `http://localhost:9090`
+- sFlow-RT: `http://localhost:8008`
+
+Grafana is the best place to inspect infrastructure health and traffic behavior at a glance.
+
+#### 2. Attach to the Mininet lab
+
+The persistent lab topology runs inside `tmux`. Attach to it with:
+
+```bash
+tmux attach -t mininet_lab
+```
+
+From the Mininet prompt, test connectivity:
+
+```bash
+pingall
+```
+
+#### 3. Test QoS behavior
+
+You can manually generate traffic between hosts to observe rate limiting:
+
+```bash
+xterm h1 h3
+```
+
+Then run these commands in the opened host terminals:
+
+On `h3`:
+
+```bash
+iperf -s -u &
+```
+
+On `h1`:
+
+```bash
+iperf -c 10.0.0.3 -u -b 6M -t 10
+```
+
+Watch the QoS-related dashboards in Grafana while the traffic is running.
+
+To detach from the `tmux` session without stopping the lab, press `Ctrl+B`, then `D`.
+
+### Quick Start Checklist
+
+If you want the shortest path from a fresh VM to a working lab, the practical order is:
+
+1. install Docker, Mininet, Open vSwitch, Ansible, and Python dependencies
+2. clone the repository and create the `sdn_net` Docker network
+3. build `mon-ryu:v2`
+4. run `ansible-playbook ansible/deploy_ci.yml -i ansible/inventory.ini`
+5. run `ansible-playbook ansible/deploy_lab.yml -i ansible/inventory.ini`
+6. configure a self-hosted GitHub runner if you want the full CI/CD workflow
+
+Once those steps work, the VM is ready to host the project for demos, testing, and automation experiments.
 
 ## Repository Structure
 
