@@ -1,11 +1,10 @@
 {
   "policing_rules": [
-
 {
-      "description": "Limiter h1 a 5 Mbps",
-      "interface": "s1-eth1",
-      "rate_kbps": 5000,
-      "burst_kb": 500
-    }
+  "description": "QoS: Limiter le trafic sortant du Spine 1 vers Leaf 4",
+  "interface": "s1-eth2", 
+  "rate_kbps": 10000,
+  "burst_kb": 1000
+}
   ]
 }
