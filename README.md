@@ -329,7 +329,7 @@ If prompted, type `yes` to trust GitHub's host key.
 Fork the project or clone your own copy, then move into the workspace:
 
 ```bash
-git clone git@github.com:YourUsername/sdn-netdevops-project.git
+git clone git@github.com:EYAannabi/sdn-netdevops-project.git
 cd sdn-netdevops-project
 ```
 
@@ -458,7 +458,7 @@ Grafana is the best place to inspect infrastructure health and traffic behavior 
 The persistent lab topology runs inside `tmux`. Attach to it with:
 
 ```bash
-tmux attach -t mininet_lab
+sudo tmux attach -t mininet_lab
 ```
 
 From the Mininet prompt, test connectivity:
