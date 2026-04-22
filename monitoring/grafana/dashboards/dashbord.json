@@ -1,0 +1,114 @@
+{
+  "title": "SDN NetDevOps: Policy Validation & Performance",
+  "description": "Validation of SDN Firewall, QoS, and Path Redundancy using sFlow and Ryu Exporter.",
+  "editable": true,
+  "panels": [
+    {
+      "title": "1. SDN Infrastructure Health",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 10,
+      "title": "Controller Status",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "ryu_controller_up" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [{ "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "ACTIVE", "color": "green" } }, "type": "value" }]
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Connected Switches",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "ryu_connected_switches" }],
+      "fieldConfig": {
+        "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 4 }] } }
+      }
+    },
+    {
+      "title": "2. Firewall Validation (IP-to-IP Flows)",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "id": 20,
+      "title": "Active IP Flows (sFlow Proof)",
+      "description": "If a Firewall rule (DENY) is active, the corresponding IP pair will NOT appear here.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum by (ipsource, ipdestination) (sflow_flows_bps)", "legendFormat": "{{ipsource}} -> {{ipdestination}}" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bps", "custom": { "drawStyle": "area", "fillOpacity": 20 } }
+      }
+    },
+    {
+      "title": "3. QoS & Bandwidth Performance (iperf Validation)",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 }
+    },
+    {
+      "id": 30,
+      "title": "Real-time Throughput per Port",
+      "description": "Compare this with your iperf command output. Look for 'plateaus' to verify QoS Policing.",
+      "type": "timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 15 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(ryu_port_rx_bytes[30s]) * 8", "legendFormat": "Switch {{dpid}} Port {{port_no}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bps",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 5000000 }]
+          }
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Max Observed Bandwidth",
+      "type": "gauge",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 15 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "max_over_time(rate(ryu_port_rx_bytes[1m])[5m:1s]) * 8" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bps", "max": 100000000 }
+      }
+    },
+    {
+      "title": "4. Path Analysis & Failover Proof",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 }
+    },
+    {
+      "id": 40,
+      "title": "Spine Usage (S1 vs S2)",
+      "description": "If S1 link is down, traffic must jump to S2 curve immediately.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 25 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum by (dpid) (rate(ryu_port_tx_bytes{dpid=~\"1|2\"}[15s]) * 8)", "legendFormat": "Spine Switch {{dpid}}" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bps", "custom": { "lineWidth": 3 } }
+      }
+    }
+  ],
+  "refresh": "5s",
+  "time": { "from": "now-5m", "to": "now" }
+}
