@@ -1,10 +1,5 @@
 {
   "policing_rules": [
-{
-  "description": "QoS: Limiter le trafic sortant du Spine 1 vers Leaf 4",
-  "interface": "s1-eth2", 
-  "rate_kbps": 10000,
-  "burst_kb": 1000
-}
+
   ]
 }
