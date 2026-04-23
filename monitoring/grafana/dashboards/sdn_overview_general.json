@@ -1,31 +1,12 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": "-- Grafana --",
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
+  "annotations": { "list": [ { "builtIn": 1, "datasource": "-- Grafana --", "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard" } ] },
   "description": "Vue generale du lab SDN: sante, trafic global par switch et etat de la topologie physique.",
   "editable": true,
   "graphTooltip": 0,
   "panels": [
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" }
-          ],
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
-        }
-      },
+      "fieldConfig": { "defaults": { "mappings": [ { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
       "id": 1,
       "options": { "colorMode": "background", "graphMode": "none", "textMode": "value_and_name" },
@@ -35,14 +16,7 @@
     },
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" }
-          ],
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
-        }
-      },
+      "fieldConfig": { "defaults": { "mappings": [ { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
       "id": 2,
       "options": { "colorMode": "background", "graphMode": "none", "textMode": "value_and_name" },
@@ -52,14 +26,7 @@
     },
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" }
-          ],
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
-        }
-      },
+      "fieldConfig": { "defaults": { "mappings": [ { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
       "id": 3,
       "options": { "colorMode": "background", "graphMode": "none", "textMode": "value_and_name" },
@@ -79,14 +46,7 @@
     },
     {
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" }
-          ],
-          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
-        }
-      },
+      "fieldConfig": { "defaults": { "mappings": [ { "options": { "0": { "text": "Down", "color": "red" }, "1": { "text": "Up", "color": "green" } }, "type": "value" } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } } },
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "id": 5,
       "options": { "colorMode": "background", "graphMode": "none", "textMode": "value_and_name" },
@@ -100,7 +60,7 @@
       "gridPos": { "h": 10, "w": 12, "x": 0, "y": 4 },
       "id": 6,
       "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [ { "expr": "sum by (dpid) (rate(ryu_port_rx_bytes[1m]) * 8)", "legendFormat": "Switch {{dpid}}" } ],
+      "targets": [ { "expr": "sum by (dpid) (irate(ryu_port_rx_bytes[30s]) * 8)", "legendFormat": "Switch {{dpid}}" } ],
       "title": "Trafic total Entrant (RX) par Switch",
       "type": "timeseries"
     },
@@ -110,7 +70,7 @@
       "gridPos": { "h": 10, "w": 12, "x": 12, "y": 4 },
       "id": 7,
       "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [ { "expr": "sum by (dpid) (rate(ryu_port_tx_bytes[1m]) * 8)", "legendFormat": "Switch {{dpid}}" } ],
+      "targets": [ { "expr": "sum by (dpid) (irate(ryu_port_tx_bytes[30s]) * 8)", "legendFormat": "Switch {{dpid}}" } ],
       "title": "Trafic total Sortant (TX) par Switch",
       "type": "timeseries"
     }
@@ -118,7 +78,6 @@
   "refresh": "5s",
   "schemaVersion": 36,
   "style": "dark",
-  "tags": ["sdn", "infrastructure", "health"],
   "time": { "from": "now-5m", "to": "now" },
   "timezone": "browser",
   "title": "SDN 1. Infrastructure & Health",
