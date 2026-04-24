@@ -1,11 +1,4 @@
 {
   "policing_rules": [
-    {
-      "description": "Guest Limitation: Limit h4 to 2Mbps",
-      "interface": "s4-eth2",
-      "rate_kbps": 2000,
-      "burst_kb": 200
-    }
-
   ]
 }
