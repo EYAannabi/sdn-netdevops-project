@@ -17,10 +17,10 @@
   "graphTooltip": 0,
   "panels": [
     {
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
       "id": 1,
       "options": {
-        "content": "## 🧪 Dynamic NetDevOps Validation Guide\nThis dashboard automatically reflects your JSON-defined network policies.\n- **Firewall:** If a flow is blocked by Ryu, it will **not** appear in the active IP flows panel.\n- **QoS:** Limited flows will show a clear 'plateau' in the *QoS Evidence* panel corresponding to your `max_rate`.\n- **Resilience:** Disable a link (e.g., `link s1 s3 down`) to visualize the immediate traffic shift in the *Failover* panel.",
+        "content": "## 🧪 NetDevOps SDN Lab: Final Demonstration Guide\nThis dashboard provides real-time proof of **Security**, **QoS**, and **Resilience**.\n\n### 🔹 Phase 1: Baseline & Resilience\n*Goal: Prove connectivity and self-healing.*\n1. **Connectivity:** `mininet> pingall` (Switches Connected should be 4).\n2. **Path Check:** `mininet> h4 iperf -c 10.0.0.1 -u -b 15M -t 20` (Traffic on Spine 1).\n3. **Failover:** While running, type `mininet> link s1 s3 down`. \n   - *Observation:* Green/Blue curves drop; Yellow/Orange curves rise after ~30s (STP).\n\n### 🔹 Phase 2: QoS Enforcement (5 Mbps limit)\n*Goal: Verify Policing on Port s3-eth2 (H2).*\n1. **Restricted Test (H2):** `mininet> h2 iperf -c 10.0.0.1 -u -p 5001 -b 15M -t 60 -i 1` \n   - *Observation:* **Hardware Evidence** shows 15M, but **Active IP Flows** shows a **5Mbps plateau**.\n2. **Granularity Test (H3):** `mininet> h3 iperf -c 10.0.0.1 -u -b 15M -t 60 -i 1` \n   - *Observation:* Full 15 Mbps (0% loss) because H3 has no QoS limit.\n\n### 🔹 Phase 3: Security & Multi-Switch QoS\n*Goal: Block H1/H4 and limit Guest H4 to 2Mbps.*\n1. **Firewall:** `mininet> h1 ping -c 2 10.0.0.4` \n   - *Observation:* 100% loss. No curve appears in the IP Flows panel.\n2. **Guest QoS (H4):** `mininet> h2 iperf -s -u &` then `mininet> h4 iperf -c 10.0.0.2 -u -b 10M -t 60 -i 1` \n   - *Observation:* iperf reports **~1.9 Mbps**. Proof that QoS works on **Switch 4** too.\n\n---",
         "mode": "markdown"
       },
       "title": "NetDevOps Operations Guide",
@@ -29,7 +29,7 @@
     {
       "datasource": "Prometheus",
       "fieldConfig": { "defaults": { "unit": "bps", "custom": { "fillOpacity": 20, "lineWidth": 2 } } },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 6 },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 12 },
       "id": 2,
       "options": {
         "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max", "mean"] },
@@ -44,7 +44,7 @@
     {
       "datasource": "Prometheus",
       "fieldConfig": { "defaults": { "unit": "bps", "custom": { "fillOpacity": 15 } } },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 6 },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 12 },
       "id": 3,
       "options": {
         "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max"] },
@@ -59,7 +59,7 @@
     {
       "datasource": "Prometheus",
       "fieldConfig": { "defaults": { "unit": "bps", "custom": { "fillOpacity": 35, "lineWidth": 2, "gradientMode": "area" } } },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
       "id": 4,
       "options": {
         "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true, "calcs": ["max"] },
