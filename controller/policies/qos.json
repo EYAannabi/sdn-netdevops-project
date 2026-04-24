@@ -1,10 +1,10 @@
 {
   "policing_rules": [
     {
-      "description": "Limiter h1 a 5 Mbps",
-      "interface": "s3-eth2",
-      "rate_kbps": 5000,
-      "burst_kb": 500
+      "description": "Guest Limitation: Limit h4 to 2Mbps",
+      "interface": "s4-eth2",
+      "rate_kbps": 2000,
+      "burst_kb": 200
     }
 
   ]
